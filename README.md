@@ -110,4 +110,4 @@ let is_rich: bool = engine.eval_with_scope(&mut scope, script).unwrap();
 
 ## License
 
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* MIT license (http://opensource.org/licenses/MIT)
