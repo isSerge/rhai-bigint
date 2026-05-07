@@ -18,6 +18,14 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 
 ## Installation
 
+### Add via Cargo
+
+```bash
+cargo add rhai-bigint
+```
+
+### Manual Configuration
+
 Add the following to your `Cargo.toml`:
 
 ```toml
