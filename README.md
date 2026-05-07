@@ -1,5 +1,10 @@
 # rhai-bigint
 
+[![Crates.io](https://img.shields.io/crates/v/rhai-bigint.svg)](https://crates.io/crates/rhai-bigint)
+[![Docs.rs](https://docs.rs/rhai-bigint/badge.svg)](https://docs.rs/rhai-bigint)
+[![License](https://img.shields.io/crates/l/rhai-bigint.svg)](https://crates.io/crates/rhai-bigint)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/isSerge/rhai-bigint/ci.yml?branch=main)](https://github.com/isSerge/rhai-bigint/actions)
+
 A [Rhai](https://rhai.rs/) scripting engine plugin providing seamless, arbitrary-precision BigInt arithmetic.
 
 ## Why this exists
