@@ -108,7 +108,9 @@ mod tests {
         let result: BigInt = engine.eval("bigint(42)").unwrap();
         assert_eq!(result.to_string(), "42");
 
-        let result: BigInt = engine.eval("bigint(\"123456789012345678901234567890\")").unwrap();
+        let result: BigInt = engine
+            .eval("bigint(\"123456789012345678901234567890\")")
+            .unwrap();
         assert_eq!(result.to_string(), "123456789012345678901234567890");
 
         let result: BigInt = engine.eval("bigint(42) + bigint(58)").unwrap();
@@ -129,18 +131,22 @@ mod tests {
         let mut engine = Engine::new();
         register_bigint_with_rhai(&mut engine);
 
-        let result: BigInt =
-            engine.eval("bigint(1000000000000000000) + bigint(2000000000000000000)").unwrap();
+        let result: BigInt = engine
+            .eval("bigint(1000000000000000000) + bigint(2000000000000000000)")
+            .unwrap();
         assert_eq!(result.to_string(), "3000000000000000000");
 
-        let result: BigInt =
-            engine.eval("bigint(5000000000000000000) - bigint(1000000000000000000)").unwrap();
+        let result: BigInt = engine
+            .eval("bigint(5000000000000000000) - bigint(1000000000000000000)")
+            .unwrap();
         assert_eq!(result.to_string(), "4000000000000000000");
 
         let result: BigInt = engine.eval("bigint(1000000) * bigint(1000000)").unwrap();
         assert_eq!(result.to_string(), "1000000000000");
 
-        let result: BigInt = engine.eval("bigint(1000000000000) / bigint(1000000)").unwrap();
+        let result: BigInt = engine
+            .eval("bigint(1000000000000) / bigint(1000000)")
+            .unwrap();
         assert_eq!(result.to_string(), "1000000");
     }
 
