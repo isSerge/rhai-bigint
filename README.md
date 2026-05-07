@@ -32,19 +32,20 @@ rhai-bigint = "0.1.0"
 
 ## Usage
 
-### 1. Registering the Plugin in Rust
+### 1. Registering the Package in Rust
 
-Using the plugin is as simple as registering the custom type and the package with your Rhai `Engine`.
+Using the plugin is as simple as registering the package with your Rhai `Engine`.
 
 ```rust
 use rhai::Engine;
-use rhai_bigint::register_bigint_with_rhai;
+use rhai::packages::Package;
+use rhai_bigint::BigIntPackage;
 
 fn main() {
     let mut engine = Engine::new();
     
-    // Register the BigInt type and all arithmetic operators
-    register_bigint_with_rhai(&mut engine);
+    // Register the package into the engine
+    BigIntPackage::new().register_into_engine(&mut engine);
 
     // Now your scripts can seamlessly handle massive numbers!
     let script = r#"
@@ -91,11 +92,12 @@ if price >= threshold {
 If you are writing a host application and need to inject a `BigInt` into a script's Scope, you can use the `Dynamic` wrapper:
 
 ```rust
-use rhai::{Engine, Scope, Dynamic};
+use rhai::{Engine, Scope, Dynamic, packages::Package};
 use num_bigint::BigInt;
+use rhai_bigint::BigIntPackage;
 
 let mut engine = Engine::new();
-rhai_bigint::register_bigint_with_rhai(&mut engine);
+BigIntPackage::new().register_into_engine(&mut engine);
 
 let mut scope = Scope::new();
 

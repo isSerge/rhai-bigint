@@ -6,7 +6,7 @@
 //! `register_bigint_with_rhai` convenience function.
 
 use num_bigint::BigInt;
-use rhai::{def_package, packages::Package, plugin::*};
+use rhai::{def_package, plugin::*};
 
 #[export_module]
 mod bigint_functions {
@@ -84,26 +84,21 @@ def_package! {
     /// Arbitrary-precision BigInt for Rhai: `bigint()` constructor plus
     /// arithmetic (`+`, `-`, `*`, `/`) and comparison operators.
     pub BigIntPackage(lib) {
+        lib.set_custom_type::<BigInt>("BigInt");
         combine_with_exported_module!(lib, "bigint", bigint_functions);
     }
 }
 
-/// Register the `BigInt` custom type and [`BigIntPackage`] with a Rhai engine.
-pub fn register_bigint_with_rhai(engine: &mut rhai::Engine) {
-    engine.register_type_with_name::<BigInt>("BigInt");
-    BigIntPackage::new().register_into_engine(engine);
-}
-
 #[cfg(test)]
 mod tests {
-    use rhai::Engine;
+    use rhai::{Engine, packages::Package};
 
     use super::*;
 
     #[test]
     fn test_rhai_integration() {
         let mut engine = Engine::new();
-        register_bigint_with_rhai(&mut engine);
+        BigIntPackage::new().register_into_engine(&mut engine);
 
         let result: BigInt = engine.eval("bigint(42)").unwrap();
         assert_eq!(result.to_string(), "42");
@@ -129,7 +124,7 @@ mod tests {
     #[test]
     fn test_core_functionality() {
         let mut engine = Engine::new();
-        register_bigint_with_rhai(&mut engine);
+        BigIntPackage::new().register_into_engine(&mut engine);
 
         let result: BigInt = engine
             .eval("bigint(1000000000000000000) + bigint(2000000000000000000)")
@@ -153,7 +148,7 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let mut engine = Engine::new();
-        register_bigint_with_rhai(&mut engine);
+        BigIntPackage::new().register_into_engine(&mut engine);
 
         let result = engine.eval::<BigInt>("bigint(\"not_a_number\")");
         assert!(result.is_err());
