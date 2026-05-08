@@ -49,6 +49,19 @@ mod bigint_functions {
         Ok(l.clone() / r)
     }
 
+    #[rhai_fn(name = "%", pure, return_raw)]
+    pub fn rem(l: &mut BigInt, r: BigInt) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        if r.is_zero() {
+            return Err("Modulo by zero".into());
+        }
+        Ok(l.clone() % r)
+    }
+
+    #[rhai_fn(name = "-", pure)]
+    pub fn neg(value: &mut BigInt) -> BigInt {
+        -value.clone()
+    }
+
     #[rhai_fn(name = "==", pure)]
     pub fn eq(l: &mut BigInt, r: BigInt) -> bool {
         *l == r
@@ -82,7 +95,7 @@ mod bigint_functions {
 
 def_package! {
     /// Arbitrary-precision BigInt for Rhai: `bigint()` constructor plus
-    /// arithmetic (`+`, `-`, `*`, `/`) and comparison operators.
+    /// arithmetic (`+`, `-`, `*`, `/`, `%`), unary negation (`-`), and comparison operators.
     pub BigIntPackage(lib) {
         lib.set_custom_type::<BigInt>("BigInt");
         combine_with_exported_module!(lib, "bigint", bigint_functions);
@@ -143,6 +156,12 @@ mod tests {
             .eval("bigint(1000000000000) / bigint(1000000)")
             .unwrap();
         assert_eq!(result.to_string(), "1000000");
+
+        let result: BigInt = engine.eval("bigint(10) % bigint(3)").unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        let result: BigInt = engine.eval("-bigint(42)").unwrap();
+        assert_eq!(result.to_string(), "-42");
     }
 
     #[test]
@@ -154,6 +173,9 @@ mod tests {
         assert!(result.is_err());
 
         let result = engine.eval::<BigInt>("bigint(42) / bigint(0)");
+        assert!(result.is_err());
+
+        let result = engine.eval::<BigInt>("bigint(42) % bigint(0)");
         assert!(result.is_err());
     }
 }
