@@ -18,7 +18,8 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 ## Features
 
 - Constructs `BigInt` from integers and strings.
-- Overloads standard arithmetic operators (`+`, `-`, `*`, `/`).
+- Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`).
+- Overloads unary negation (`-`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 
 ## Installation
@@ -36,7 +37,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.0"
+rhai-bigint = "0.1.1"
 ```
 
 ### Feature Flags
@@ -88,6 +89,8 @@ let sum = a + b;
 let diff = b - a;
 let prod = a * b;
 let quotient = b / a;
+let remainder = b % a;
+let negative = -a;
 ```
 
 #### Comparisons
