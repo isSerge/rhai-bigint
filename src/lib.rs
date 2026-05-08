@@ -95,7 +95,7 @@ mod bigint_functions {
 
 def_package! {
     /// Arbitrary-precision BigInt for Rhai: `bigint()` constructor plus
-    /// arithmetic (`+`, `-`, `*`, `/`) and comparison operators.
+    /// arithmetic (`+`, `-`, `*`, `/`, `%`), unary negation (`-`), and comparison operators.
     pub BigIntPackage(lib) {
         lib.set_custom_type::<BigInt>("BigInt");
         combine_with_exported_module!(lib, "bigint", bigint_functions);
