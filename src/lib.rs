@@ -20,8 +20,8 @@ mod bigint_functions {
 
     /// Creates a `BigInt` from a float by truncating toward zero.
     #[rhai_fn(name = "bigint", return_raw)]
-    pub fn bigint_from_f64(value: f64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
-        BigInt::from_f64(value)
+    pub fn bigint_from_float(value: rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        BigInt::from_f64(value as f64)
             .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
     }
 

@@ -17,7 +17,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 
 ## Features
 
-- Constructs `BigInt` from integers (`i64`), floats (`f64`, truncated toward zero), and strings.
+- Constructs `BigInt` from integers (`i64`), floats (`rhai::FLOAT`, truncated toward zero), and strings.
 - Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`).
 - Overloads unary negation (`-`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
@@ -37,7 +37,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.1"
+rhai-bigint = "0.1.2"
 ```
 
 ### Feature Flags
@@ -82,9 +82,9 @@ Once registered, your users can write natural, ergonomic scripts.
 
 #### Basic Arithmetic
 ```js
-let a = bigint(42);          // from integer
-let a = bigint(1.5);         // from float — truncates to 1
+let a = bigint(42);                              // from integer
 let b = bigint("100000000000000000000000000000"); // from string
+// let a = bigint(1.5);  // from float — truncates toward zero, so this equals 1
 
 let sum = a + b;
 let diff = b - a;
