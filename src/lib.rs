@@ -198,7 +198,7 @@ mod tests {
         let result: BigInt = engine.eval("bigint(-2.9)").unwrap();
         assert_eq!(result.to_string(), "-2");
 
-        // whole-number floats round-trip exactly
+        // exactly representable whole-number floats convert exactly
         let result: BigInt = engine.eval("bigint(42.0)").unwrap();
         assert_eq!(result.to_string(), "42");
 
