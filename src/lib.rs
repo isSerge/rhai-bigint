@@ -2,8 +2,8 @@
 
 //! Arbitrary-precision BigInt support for Rhai scripts.
 //!
-//! Provides [`BigIntPackage`] (via `def_package!`) and the
-//! `register_bigint_with_rhai` convenience function.
+//! Provides [`BigIntPackage`] (via `def_package!`) for registering BigInt
+//! support into a Rhai [`Engine`](rhai::Engine).
 
 use num_bigint::BigInt;
 use rhai::{def_package, plugin::*};
@@ -11,11 +11,18 @@ use rhai::{def_package, plugin::*};
 #[export_module]
 mod bigint_functions {
     use num_bigint::BigInt;
-    use num_traits::Zero;
+    use num_traits::{FromPrimitive, Zero};
 
     /// Creates a `BigInt` from an integer.
     pub fn bigint(value: i64) -> BigInt {
         value.into()
+    }
+
+    /// Creates a `BigInt` from a float by truncating toward zero.
+    #[rhai_fn(name = "bigint", return_raw)]
+    pub fn bigint_from_float(value: rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        BigInt::from_f64(value)
+            .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
     }
 
     /// Creates a `BigInt` from a string.
@@ -177,5 +184,38 @@ mod tests {
 
         let result = engine.eval::<BigInt>("bigint(42) % bigint(0)");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bigint_from_f64() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // fractional part is truncated toward zero
+        let result: BigInt = engine.eval("bigint(1.5)").unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        let result: BigInt = engine.eval("bigint(-2.9)").unwrap();
+        assert_eq!(result.to_string(), "-2");
+
+        // exactly representable whole-number floats convert exactly
+        let result: BigInt = engine.eval("bigint(42.0)").unwrap();
+        assert_eq!(result.to_string(), "42");
+
+        // large float that exceeds i64 range
+        let result: BigInt = engine.eval("bigint(1e30)").unwrap();
+        assert_eq!(result.to_string(), "1000000000000000019884624838656");
+    }
+
+    #[test]
+    fn test_bigint_from_f64_errors() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result = engine.eval::<BigInt>("bigint(1.0 / 0.0)");
+        assert!(result.is_err(), "infinity should be rejected");
+
+        let result = engine.eval::<BigInt>("bigint(0.0 / 0.0)");
+        assert!(result.is_err(), "NaN should be rejected");
     }
 }
