@@ -21,6 +21,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`).
 - Overloads unary negation (`-`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
+- Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
 
 ## Installation
 
@@ -37,7 +38,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.2"
+rhai-bigint = "0.1.3"
 ```
 
 ### Feature Flags
@@ -126,6 +127,10 @@ scope.push("balance", Dynamic::from(my_rust_bigint));
 let script = "balance > bigint(100)";
 let is_rich: bool = engine.eval_with_scope(&mut scope, script).unwrap();
 ```
+
+## Related Crates
+
+- **[rhai-evm](https://crates.io/crates/rhai-evm)** — Complements `rhai-bigint` with EVM-specific helpers: denomination constructors (`ether()`, `gwei()`, `usdc()`), Keccak-256 hashing, EIP-55 address utilities, and lossless conversion from `alloy-primitives` types (`U256`, `I256`) into `BigInt`.
 
 ## License
 
