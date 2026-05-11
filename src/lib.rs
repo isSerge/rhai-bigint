@@ -10,8 +10,8 @@ use rhai::{def_package, plugin::*};
 
 #[export_module]
 mod bigint_functions {
-    use num_bigint::BigInt;
-    use num_traits::{FromPrimitive, Zero};
+    use num_bigint::{BigInt, Sign};
+    use num_traits::{FromPrimitive, ToPrimitive, Zero};
 
     /// Creates a `BigInt` from an integer.
     pub fn bigint(value: i64) -> BigInt {
@@ -97,6 +97,35 @@ mod bigint_functions {
     #[rhai_fn(name = ">=", pure)]
     pub fn ge(l: &mut BigInt, r: BigInt) -> bool {
         *l >= r
+    }
+
+    /// Converts a `BigInt` to its decimal string representation.
+    #[rhai_fn(name = "to_string", pure)]
+    pub fn to_string(value: &mut BigInt) -> String {
+        value.to_string()
+    }
+
+    /// Converts a `BigInt` to a `0x`-prefixed lowercase hex string.
+    /// Negative values are prefixed with `-0x`.
+    #[rhai_fn(name = "to_hex", pure)]
+    pub fn to_hex(value: &mut BigInt) -> String {
+        let hex = format!("{:x}", value.magnitude());
+        if value.sign() == Sign::Minus {
+            format!("-0x{hex}")
+        } else {
+            format!("0x{hex}")
+        }
+    }
+
+    /// Converts a `BigInt` to a float, returning an error if the value
+    /// is too large to represent as a finite float.
+    #[rhai_fn(name = "to_float", pure, return_raw)]
+    pub fn to_float(value: &mut BigInt) -> Result<rhai::FLOAT, Box<rhai::EvalAltResult>> {
+        value
+            .to_f64()
+            .filter(|f| f.is_finite())
+            .map(|f| f as rhai::FLOAT)
+            .ok_or_else(|| "BigInt value is too large to represent as a finite float".into())
     }
 }
 
@@ -217,5 +246,58 @@ mod tests {
 
         let result = engine.eval::<BigInt>("bigint(0.0 / 0.0)");
         assert!(result.is_err(), "NaN should be rejected");
+    }
+
+    #[test]
+    fn test_to_string() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: String = engine.eval("bigint(42).to_string()").unwrap();
+        assert_eq!(result, "42");
+
+        let result: String = engine.eval("bigint(-99).to_string()").unwrap();
+        assert_eq!(result, "-99");
+
+        let result: String = engine
+            .eval("bigint(\"123456789012345678901234567890\").to_string()")
+            .unwrap();
+        assert_eq!(result, "123456789012345678901234567890");
+    }
+
+    #[test]
+    fn test_to_hex() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: String = engine.eval("bigint(255).to_hex()").unwrap();
+        assert_eq!(result, "0xff");
+
+        let result: String = engine.eval("bigint(0).to_hex()").unwrap();
+        assert_eq!(result, "0x0");
+
+        let result: String = engine.eval("bigint(-255).to_hex()").unwrap();
+        assert_eq!(result, "-0xff");
+
+        let result: String = engine.eval("bigint(256).to_hex()").unwrap();
+        assert_eq!(result, "0x100");
+    }
+
+    #[test]
+    fn test_to_float() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: rhai::FLOAT = engine.eval("bigint(42).to_float()").unwrap();
+        assert_eq!(result, 42.0);
+
+        let result: rhai::FLOAT = engine.eval("bigint(-7).to_float()").unwrap();
+        assert_eq!(result, -7.0);
+
+        // value too large to be finite in f64
+        let result = engine.eval::<rhai::FLOAT>(
+            "bigint(\"999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\").to_float()"
+        );
+        assert!(result.is_err(), "overflow to infinity should be rejected");
     }
 }

@@ -21,6 +21,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`).
 - Overloads unary negation (`-`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
+- Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
 
 ## Installation
 
@@ -37,7 +38,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.2"
+rhai-bigint = "0.1.3"
 ```
 
 ### Feature Flags
