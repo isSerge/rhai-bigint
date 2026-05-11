@@ -128,6 +128,10 @@ let script = "balance > bigint(100)";
 let is_rich: bool = engine.eval_with_scope(&mut scope, script).unwrap();
 ```
 
+## Related Crates
+
+- **[rhai-evm](https://crates.io/crates/rhai-evm)** — Complements `rhai-bigint` with EVM-specific helpers: denomination constructors (`ether()`, `gwei()`, `usdc()`), Keccak-256 hashing, EIP-55 address utilities, and lossless conversion from `alloy-primitives` types (`U256`, `I256`) into `BigInt`.
+
 ## License
 
 * MIT license (http://opensource.org/licenses/MIT)
