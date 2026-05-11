@@ -123,8 +123,8 @@ mod bigint_functions {
     pub fn to_float(value: &mut BigInt) -> Result<rhai::FLOAT, Box<rhai::EvalAltResult>> {
         value
             .to_f64()
-            .filter(|f| f.is_finite())
             .map(|f| f as rhai::FLOAT)
+            .filter(|f| f.is_finite())
             .ok_or_else(|| "BigInt value is too large to represent as a finite float".into())
     }
 }
