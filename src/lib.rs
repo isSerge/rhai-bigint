@@ -94,22 +94,28 @@ mod bigint_functions {
         l.clone() ^ r
     }
 
-    /// Left-shifts a `BigInt` by `shift` bits. `shift` must be non-negative.
-    #[rhai_fn(name = "<<", pure, return_raw)]
-    pub fn shl(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
-        let shift_u64 = u64::try_from(shift).map_err(|_| -> Box<rhai::EvalAltResult> {
-            format!("Shift amount must be non-negative, got {shift}").into()
-        })?;
-        Ok(value.clone() << shift_u64)
+    fn validate_shift_amount(shift: i64) -> Result<u32, Box<rhai::EvalAltResult>> {
+        if shift < 0 {
+            return Err(format!("Shift amount must be non-negative, got {shift}").into());
+        }
+
+        u32::try_from(shift).map_err(|_| -> Box<rhai::EvalAltResult> {
+            format!("Shift amount is too large, must be at most {}", u32::MAX).into()
+        })
     }
 
-    /// Right-shifts a `BigInt` by `shift` bits. `shift` must be non-negative.
+    /// Left-shifts a `BigInt` by `shift` bits. `shift` must be non-negative and fit in `u32`.
+    #[rhai_fn(name = "<<", pure, return_raw)]
+    pub fn shl(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        let shift_u32 = validate_shift_amount(shift)?;
+        Ok(value.clone() << shift_u32)
+    }
+
+    /// Right-shifts a `BigInt` by `shift` bits. `shift` must be non-negative and fit in `u32`.
     #[rhai_fn(name = ">>", pure, return_raw)]
     pub fn shr(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
-        let shift_u64 = u64::try_from(shift).map_err(|_| -> Box<rhai::EvalAltResult> {
-            format!("Shift amount must be non-negative, got {shift}").into()
-        })?;
-        Ok(value.clone() >> shift_u64)
+        let shift_u32 = validate_shift_amount(shift)?;
+        Ok(value.clone() >> shift_u32)
     }
 
     #[rhai_fn(name = "==", pure)]
