@@ -79,6 +79,39 @@ mod bigint_functions {
         Ok(base.clone().pow(exp_u32))
     }
 
+    #[rhai_fn(name = "&", pure)]
+    pub fn bitand(l: &mut BigInt, r: BigInt) -> BigInt {
+        l.clone() & r
+    }
+
+    #[rhai_fn(name = "|", pure)]
+    pub fn bitor(l: &mut BigInt, r: BigInt) -> BigInt {
+        l.clone() | r
+    }
+
+    #[rhai_fn(name = "^", pure)]
+    pub fn bitxor(l: &mut BigInt, r: BigInt) -> BigInt {
+        l.clone() ^ r
+    }
+
+    /// Left-shifts a `BigInt` by `shift` bits. `shift` must be non-negative.
+    #[rhai_fn(name = "<<", pure, return_raw)]
+    pub fn shl(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        let shift_u64 = u64::try_from(shift).map_err(|_| -> Box<rhai::EvalAltResult> {
+            format!("Shift amount must be non-negative, got {shift}").into()
+        })?;
+        Ok(value.clone() << shift_u64)
+    }
+
+    /// Right-shifts a `BigInt` by `shift` bits. `shift` must be non-negative.
+    #[rhai_fn(name = ">>", pure, return_raw)]
+    pub fn shr(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        let shift_u64 = u64::try_from(shift).map_err(|_| -> Box<rhai::EvalAltResult> {
+            format!("Shift amount must be non-negative, got {shift}").into()
+        })?;
+        Ok(value.clone() >> shift_u64)
+    }
+
     #[rhai_fn(name = "==", pure)]
     pub fn eq(l: &mut BigInt, r: BigInt) -> bool {
         *l == r
@@ -313,6 +346,54 @@ mod tests {
         // negative exponent should be rejected
         let result = engine.eval::<BigInt>("bigint(2) ** -1");
         assert!(result.is_err(), "negative exponent should be rejected");
+    }
+
+    #[test]
+    fn test_bitwise_operators() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // AND
+        let result: BigInt = engine.eval("bigint(0b1100) & bigint(0b1010)").unwrap();
+        assert_eq!(result.to_string(), "8"); // 0b1000
+
+        let result: BigInt = engine.eval("bigint(255) & bigint(15)").unwrap();
+        assert_eq!(result.to_string(), "15");
+
+        // OR
+        let result: BigInt = engine.eval("bigint(0b1100) | bigint(0b1010)").unwrap();
+        assert_eq!(result.to_string(), "14"); // 0b1110
+
+        let result: BigInt = engine.eval("bigint(240) | bigint(15)").unwrap();
+        assert_eq!(result.to_string(), "255");
+
+        // XOR
+        let result: BigInt = engine.eval("bigint(0b1100) ^ bigint(0b1010)").unwrap();
+        assert_eq!(result.to_string(), "6"); // 0b0110
+
+        let result: BigInt = engine.eval("bigint(255) ^ bigint(255)").unwrap();
+        assert_eq!(result.to_string(), "0");
+
+        // Left shift
+        let result: BigInt = engine.eval("bigint(1) << 10").unwrap();
+        assert_eq!(result.to_string(), "1024");
+
+        let result: BigInt = engine.eval("bigint(1) << 64").unwrap();
+        assert_eq!(result.to_string(), "18446744073709551616");
+
+        // Right shift
+        let result: BigInt = engine.eval("bigint(1024) >> 3").unwrap();
+        assert_eq!(result.to_string(), "128");
+
+        let result: BigInt = engine.eval("bigint(1) >> 1").unwrap();
+        assert_eq!(result.to_string(), "0");
+
+        // Negative shift amount should be rejected
+        let result = engine.eval::<BigInt>("bigint(1) << -1");
+        assert!(result.is_err(), "negative left-shift should be rejected");
+
+        let result = engine.eval::<BigInt>("bigint(1) >> -1");
+        assert!(result.is_err(), "negative right-shift should be rejected");
     }
 
     #[test]
