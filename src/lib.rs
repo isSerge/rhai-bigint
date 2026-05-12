@@ -69,6 +69,16 @@ mod bigint_functions {
         -value.clone()
     }
 
+    /// Raises a `BigInt` to an integer power. The exponent must be non-negative
+    /// and fit in a `u32`; returns an error otherwise.
+    #[rhai_fn(name = "**", pure, return_raw)]
+    pub fn pow(base: &mut BigInt, exp: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        let exp_u32 = u32::try_from(exp).map_err(|_| -> Box<rhai::EvalAltResult> {
+            format!("Exponent must be a non-negative integer that fits in u32, got {exp}").into()
+        })?;
+        Ok(base.clone().pow(exp_u32))
+    }
+
     #[rhai_fn(name = "==", pure)]
     pub fn eq(l: &mut BigInt, r: BigInt) -> bool {
         *l == r
@@ -281,6 +291,28 @@ mod tests {
 
         let result: String = engine.eval("bigint(256).to_hex()").unwrap();
         assert_eq!(result, "0x100");
+    }
+
+    #[test]
+    fn test_exponentiation() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: BigInt = engine.eval("bigint(2) ** 10").unwrap();
+        assert_eq!(result.to_string(), "1024");
+
+        let result: BigInt = engine.eval("bigint(10) ** 18").unwrap();
+        assert_eq!(result.to_string(), "1000000000000000000");
+
+        let result: BigInt = engine.eval("bigint(-3) ** 3").unwrap();
+        assert_eq!(result.to_string(), "-27");
+
+        let result: BigInt = engine.eval("bigint(5) ** 0").unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        // negative exponent should be rejected
+        let result = engine.eval::<BigInt>("bigint(2) ** -1");
+        assert!(result.is_err(), "negative exponent should be rejected");
     }
 
     #[test]

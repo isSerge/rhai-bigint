@@ -18,7 +18,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 ## Features
 
 - Constructs `BigInt` from integers (`i64`), floats (`rhai::FLOAT`, truncated toward zero), and strings.
-- Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`).
+- Overloads standard arithmetic operators (`+`, `-`, `*`, `/`, `%`, `**`).
 - Overloads unary negation (`-`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 - Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
@@ -38,7 +38,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.3"
+rhai-bigint = "0.1.4"
 ```
 
 ### Feature Flags
@@ -92,6 +92,7 @@ let diff = b - a;
 let prod = a * b;
 let quotient = b / a;
 let remainder = b % a;
+let power = a ** 3;    // exponentiation — exponent must be a non-negative integer
 let negative = -a;
 ```
 
