@@ -34,14 +34,14 @@ mod bigint_functions {
     }
 
     /// Converts an integer to a `BigInt` via method-call syntax: `42.to_bigint()`.
-    #[rhai_fn(name = "to_bigint")]
+    #[rhai_fn(name = "to_bigint", pure)]
     pub fn i64_to_bigint(value: &mut i64) -> BigInt {
         BigInt::from(*value)
     }
 
     /// Converts a float to a `BigInt` by truncating toward zero.
     /// Returns an error for non-finite values (infinity, NaN).
-    #[rhai_fn(name = "to_bigint", return_raw)]
+    #[rhai_fn(name = "to_bigint", return_raw, pure)]
     pub fn float_to_bigint(value: &mut rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         BigInt::from_f64(*value)
             .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
