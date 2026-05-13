@@ -14,20 +14,20 @@ mod bigint_functions {
     use num_traits::{FromPrimitive, ToPrimitive, Zero};
 
     /// Creates a `BigInt` from an integer.
-    pub fn bigint(value: i64) -> BigInt {
+    pub fn parse_bigint(value: i64) -> BigInt {
         value.into()
     }
 
     /// Creates a `BigInt` from a float by truncating toward zero.
-    #[rhai_fn(name = "bigint", return_raw)]
-    pub fn bigint_from_float(value: rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    #[rhai_fn(name = "parse_bigint", return_raw)]
+    pub fn parse_bigint_from_float(value: rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         BigInt::from_f64(value)
             .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
     }
 
     /// Creates a `BigInt` from a string.
-    #[rhai_fn(name = "bigint", return_raw)]
-    pub fn bigint_from_str(value: String) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    #[rhai_fn(name = "parse_bigint", return_raw)]
+    pub fn parse_bigint_from_str(value: String) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         value
             .parse::<BigInt>()
             .map_err(|e| format!("Failed to create BigInt from string: {e}").into())
@@ -198,24 +198,26 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result: BigInt = engine.eval("bigint(42)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(42)").unwrap();
         assert_eq!(result.to_string(), "42");
 
         let result: BigInt = engine
-            .eval("bigint(\"123456789012345678901234567890\")")
+            .eval("parse_bigint(\"123456789012345678901234567890\")")
             .unwrap();
         assert_eq!(result.to_string(), "123456789012345678901234567890");
 
-        let result: BigInt = engine.eval("bigint(42) + bigint(58)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(42) + parse_bigint(58)").unwrap();
         assert_eq!(result.to_string(), "100");
 
-        let result: bool = engine.eval("bigint(50) > bigint(42)").unwrap();
+        let result: bool = engine.eval("parse_bigint(50) > parse_bigint(42)").unwrap();
         assert!(result);
 
-        let result: bool = engine.eval("bigint(42) == bigint(42)").unwrap();
+        let result: bool = engine.eval("parse_bigint(42) == parse_bigint(42)").unwrap();
         assert!(result);
 
-        let result: bool = engine.eval("bigint(42) != bigint(100)").unwrap();
+        let result: bool = engine
+            .eval("parse_bigint(42) != parse_bigint(100)")
+            .unwrap();
         assert!(result);
     }
 
@@ -225,27 +227,29 @@ mod tests {
         BigIntPackage::new().register_into_engine(&mut engine);
 
         let result: BigInt = engine
-            .eval("bigint(1000000000000000000) + bigint(2000000000000000000)")
+            .eval("parse_bigint(1000000000000000000) + parse_bigint(2000000000000000000)")
             .unwrap();
         assert_eq!(result.to_string(), "3000000000000000000");
 
         let result: BigInt = engine
-            .eval("bigint(5000000000000000000) - bigint(1000000000000000000)")
+            .eval("parse_bigint(5000000000000000000) - parse_bigint(1000000000000000000)")
             .unwrap();
         assert_eq!(result.to_string(), "4000000000000000000");
 
-        let result: BigInt = engine.eval("bigint(1000000) * bigint(1000000)").unwrap();
+        let result: BigInt = engine
+            .eval("parse_bigint(1000000) * parse_bigint(1000000)")
+            .unwrap();
         assert_eq!(result.to_string(), "1000000000000");
 
         let result: BigInt = engine
-            .eval("bigint(1000000000000) / bigint(1000000)")
+            .eval("parse_bigint(1000000000000) / parse_bigint(1000000)")
             .unwrap();
         assert_eq!(result.to_string(), "1000000");
 
-        let result: BigInt = engine.eval("bigint(10) % bigint(3)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(10) % parse_bigint(3)").unwrap();
         assert_eq!(result.to_string(), "1");
 
-        let result: BigInt = engine.eval("-bigint(42)").unwrap();
+        let result: BigInt = engine.eval("-parse_bigint(42)").unwrap();
         assert_eq!(result.to_string(), "-42");
     }
 
@@ -254,46 +258,46 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result = engine.eval::<BigInt>("bigint(\"not_a_number\")");
+        let result = engine.eval::<BigInt>("parse_bigint(\"not_a_number\")");
         assert!(result.is_err());
 
-        let result = engine.eval::<BigInt>("bigint(42) / bigint(0)");
+        let result = engine.eval::<BigInt>("parse_bigint(42) / parse_bigint(0)");
         assert!(result.is_err());
 
-        let result = engine.eval::<BigInt>("bigint(42) % bigint(0)");
+        let result = engine.eval::<BigInt>("parse_bigint(42) % parse_bigint(0)");
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_bigint_from_f64() {
+    fn test_parse_bigint_from_f64() {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
         // fractional part is truncated toward zero
-        let result: BigInt = engine.eval("bigint(1.5)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1.5)").unwrap();
         assert_eq!(result.to_string(), "1");
 
-        let result: BigInt = engine.eval("bigint(-2.9)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(-2.9)").unwrap();
         assert_eq!(result.to_string(), "-2");
 
         // exactly representable whole-number floats convert exactly
-        let result: BigInt = engine.eval("bigint(42.0)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(42.0)").unwrap();
         assert_eq!(result.to_string(), "42");
 
         // large float that exceeds i64 range
-        let result: BigInt = engine.eval("bigint(1e30)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1e30)").unwrap();
         assert_eq!(result.to_string(), "1000000000000000019884624838656");
     }
 
     #[test]
-    fn test_bigint_from_f64_errors() {
+    fn test_parse_bigint_from_f64_errors() {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result = engine.eval::<BigInt>("bigint(1.0 / 0.0)");
+        let result = engine.eval::<BigInt>("parse_bigint(1.0 / 0.0)");
         assert!(result.is_err(), "infinity should be rejected");
 
-        let result = engine.eval::<BigInt>("bigint(0.0 / 0.0)");
+        let result = engine.eval::<BigInt>("parse_bigint(0.0 / 0.0)");
         assert!(result.is_err(), "NaN should be rejected");
     }
 
@@ -302,14 +306,14 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result: String = engine.eval("bigint(42).to_string()").unwrap();
+        let result: String = engine.eval("parse_bigint(42).to_string()").unwrap();
         assert_eq!(result, "42");
 
-        let result: String = engine.eval("bigint(-99).to_string()").unwrap();
+        let result: String = engine.eval("parse_bigint(-99).to_string()").unwrap();
         assert_eq!(result, "-99");
 
         let result: String = engine
-            .eval("bigint(\"123456789012345678901234567890\").to_string()")
+            .eval("parse_bigint(\"123456789012345678901234567890\").to_string()")
             .unwrap();
         assert_eq!(result, "123456789012345678901234567890");
     }
@@ -319,16 +323,16 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result: String = engine.eval("bigint(255).to_hex()").unwrap();
+        let result: String = engine.eval("parse_bigint(255).to_hex()").unwrap();
         assert_eq!(result, "0xff");
 
-        let result: String = engine.eval("bigint(0).to_hex()").unwrap();
+        let result: String = engine.eval("parse_bigint(0).to_hex()").unwrap();
         assert_eq!(result, "0x0");
 
-        let result: String = engine.eval("bigint(-255).to_hex()").unwrap();
+        let result: String = engine.eval("parse_bigint(-255).to_hex()").unwrap();
         assert_eq!(result, "-0xff");
 
-        let result: String = engine.eval("bigint(256).to_hex()").unwrap();
+        let result: String = engine.eval("parse_bigint(256).to_hex()").unwrap();
         assert_eq!(result, "0x100");
     }
 
@@ -337,20 +341,20 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result: BigInt = engine.eval("bigint(2) ** 10").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(2) ** 10").unwrap();
         assert_eq!(result.to_string(), "1024");
 
-        let result: BigInt = engine.eval("bigint(10) ** 18").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(10) ** 18").unwrap();
         assert_eq!(result.to_string(), "1000000000000000000");
 
-        let result: BigInt = engine.eval("bigint(-3) ** 3").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(-3) ** 3").unwrap();
         assert_eq!(result.to_string(), "-27");
 
-        let result: BigInt = engine.eval("bigint(5) ** 0").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(5) ** 0").unwrap();
         assert_eq!(result.to_string(), "1");
 
         // negative exponent should be rejected
-        let result = engine.eval::<BigInt>("bigint(2) ** -1");
+        let result = engine.eval::<BigInt>("parse_bigint(2) ** -1");
         assert!(result.is_err(), "negative exponent should be rejected");
     }
 
@@ -360,45 +364,53 @@ mod tests {
         BigIntPackage::new().register_into_engine(&mut engine);
 
         // AND
-        let result: BigInt = engine.eval("bigint(0b1100) & bigint(0b1010)").unwrap();
+        let result: BigInt = engine
+            .eval("parse_bigint(0b1100) & parse_bigint(0b1010)")
+            .unwrap();
         assert_eq!(result.to_string(), "8"); // 0b1000
 
-        let result: BigInt = engine.eval("bigint(255) & bigint(15)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(255) & parse_bigint(15)").unwrap();
         assert_eq!(result.to_string(), "15");
 
         // OR
-        let result: BigInt = engine.eval("bigint(0b1100) | bigint(0b1010)").unwrap();
+        let result: BigInt = engine
+            .eval("parse_bigint(0b1100) | parse_bigint(0b1010)")
+            .unwrap();
         assert_eq!(result.to_string(), "14"); // 0b1110
 
-        let result: BigInt = engine.eval("bigint(240) | bigint(15)").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(240) | parse_bigint(15)").unwrap();
         assert_eq!(result.to_string(), "255");
 
         // XOR
-        let result: BigInt = engine.eval("bigint(0b1100) ^ bigint(0b1010)").unwrap();
+        let result: BigInt = engine
+            .eval("parse_bigint(0b1100) ^ parse_bigint(0b1010)")
+            .unwrap();
         assert_eq!(result.to_string(), "6"); // 0b0110
 
-        let result: BigInt = engine.eval("bigint(255) ^ bigint(255)").unwrap();
+        let result: BigInt = engine
+            .eval("parse_bigint(255) ^ parse_bigint(255)")
+            .unwrap();
         assert_eq!(result.to_string(), "0");
 
         // Left shift
-        let result: BigInt = engine.eval("bigint(1) << 10").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1) << 10").unwrap();
         assert_eq!(result.to_string(), "1024");
 
-        let result: BigInt = engine.eval("bigint(1) << 64").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1) << 64").unwrap();
         assert_eq!(result.to_string(), "18446744073709551616");
 
         // Right shift
-        let result: BigInt = engine.eval("bigint(1024) >> 3").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1024) >> 3").unwrap();
         assert_eq!(result.to_string(), "128");
 
-        let result: BigInt = engine.eval("bigint(1) >> 1").unwrap();
+        let result: BigInt = engine.eval("parse_bigint(1) >> 1").unwrap();
         assert_eq!(result.to_string(), "0");
 
         // Negative shift amount should be rejected
-        let result = engine.eval::<BigInt>("bigint(1) << -1");
+        let result = engine.eval::<BigInt>("parse_bigint(1) << -1");
         assert!(result.is_err(), "negative left-shift should be rejected");
 
-        let result = engine.eval::<BigInt>("bigint(1) >> -1");
+        let result = engine.eval::<BigInt>("parse_bigint(1) >> -1");
         assert!(result.is_err(), "negative right-shift should be rejected");
     }
 
@@ -407,15 +419,15 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let result: rhai::FLOAT = engine.eval("bigint(42).to_float()").unwrap();
+        let result: rhai::FLOAT = engine.eval("parse_bigint(42).to_float()").unwrap();
         assert_eq!(result, 42.0);
 
-        let result: rhai::FLOAT = engine.eval("bigint(-7).to_float()").unwrap();
+        let result: rhai::FLOAT = engine.eval("parse_bigint(-7).to_float()").unwrap();
         assert_eq!(result, -7.0);
 
         // value too large to be finite in f64
         let result = engine.eval::<rhai::FLOAT>(
-            "bigint(\"999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\").to_float()"
+            "parse_bigint(\"999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999\").to_float()"
         );
         assert!(result.is_err(), "overflow to infinity should be rejected");
     }

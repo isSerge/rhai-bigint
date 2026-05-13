@@ -65,12 +65,12 @@ fn main() {
 
     // Now your scripts can seamlessly handle massive numbers!
     let script = r#"
-        let a = bigint("1500000000000000000"); // 1.5 ETH
-        let b = bigint("500000000000000000");  // 0.5 ETH
+        let a = parse_bigint("1500000000000000000"); // 1.5 ETH
+        let b = parse_bigint("500000000000000000");  // 0.5 ETH
         
         let sum = a + b;
         
-        sum > bigint("1900000000000000000") // evaluates to true
+        sum > parse_bigint("1900000000000000000") // evaluates to true
     "#;
 
     let result: bool = engine.eval(script).unwrap();
@@ -84,9 +84,9 @@ Once registered, your users can write natural, ergonomic scripts.
 
 #### Basic Arithmetic
 ```js
-let a = bigint(42);                              // from integer
-let b = bigint("100000000000000000000000000000"); // from string
-// let a = bigint(1.5);  // from float — truncates toward zero, so this equals 1
+let a = parse_bigint(42);                              // from integer
+let b = parse_bigint("100000000000000000000000000000"); // from string
+// let a = parse_bigint(1.5);  // from float — truncates toward zero, so this equals 1
 
 let sum = a + b;
 let diff = b - a;
@@ -97,17 +97,17 @@ let power = a ** 3;    // exponentiation — exponent must be a non-negative int
 let negative = -a;
 
 // Bitwise operators (two's complement semantics)
-let and_result  = a & bigint(0xFF);
-let or_result   = a | bigint(0xFF);
-let xor_result  = a ^ bigint(0xFF);
+let and_result  = a & parse_bigint(0xFF);
+let or_result   = a | parse_bigint(0xFF);
+let xor_result  = a ^ parse_bigint(0xFF);
 let left_shift  = a << 8;   // shift amount must be a non-negative integer
 let right_shift = a >> 2;
 ```
 
 #### Comparisons
 ```js
-let price = bigint("2000000000000000000");
-let threshold = bigint("1500000000000000000");
+let price = parse_bigint("2000000000000000000");
+let threshold = parse_bigint("1500000000000000000");
 
 if price >= threshold {
     print("Threshold met!");
@@ -133,7 +133,7 @@ let my_rust_bigint = BigInt::parse_bytes(b"999999999999999999999999", 10).unwrap
 scope.push("balance", Dynamic::from(my_rust_bigint));
 
 // The script can interact with it natively
-let script = "balance > bigint(100)";
+let script = "balance > parse_bigint(100)";
 let is_rich: bool = engine.eval_with_scope(&mut scope, script).unwrap();
 ```
 
