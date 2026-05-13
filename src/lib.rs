@@ -43,7 +43,7 @@ mod bigint_functions {
     /// Returns an error for non-finite values (infinity, NaN).
     #[rhai_fn(name = "to_bigint", return_raw)]
     pub fn float_to_bigint(value: &mut rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
-        BigInt::from_f64((*value))
+        BigInt::from_f64(*value)
             .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
     }
 
