@@ -23,6 +23,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads bitwise operators (`&`, `|`, `^`, `<<`, `>>`).
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 - Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
+- Provides `to_bigint()` as a method on integers and floats for ergonomic conversion: `42.to_bigint()`, `1.5.to_bigint()`.
 
 ## Installation
 
