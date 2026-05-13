@@ -33,6 +33,20 @@ mod bigint_functions {
             .map_err(|e| format!("Failed to create BigInt from string: {e}").into())
     }
 
+    /// Converts an integer to a `BigInt` via method-call syntax: `42.to_bigint()`.
+    #[rhai_fn(name = "to_bigint")]
+    pub fn i64_to_bigint(value: &mut i64) -> BigInt {
+        BigInt::from(*value)
+    }
+
+    /// Converts a float to a `BigInt` by truncating toward zero.
+    /// Returns an error for non-finite values (infinity, NaN).
+    #[rhai_fn(name = "to_bigint", return_raw)]
+    pub fn float_to_bigint(value: &mut rhai::FLOAT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        BigInt::from_f64(*value as f64)
+            .ok_or_else(|| format!("Cannot convert {value} to BigInt: value must be finite").into())
+    }
+
     #[rhai_fn(name = "+", pure)]
     pub fn add(l: &mut BigInt, r: BigInt) -> BigInt {
         l.clone() + r
@@ -356,6 +370,39 @@ mod tests {
         // negative exponent should be rejected
         let result = engine.eval::<BigInt>("parse_bigint(2) ** -1");
         assert!(result.is_err(), "negative exponent should be rejected");
+    }
+
+    #[test]
+    fn test_to_bigint_method() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // from integer
+        let result: BigInt = engine.eval("42.to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "42");
+
+        let result: BigInt = engine.eval("(-99).to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "-99");
+
+        let result: BigInt = engine.eval("0.to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "0");
+
+        // from float — truncates toward zero
+        let result: BigInt = engine.eval("1.5.to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        let result: BigInt = engine.eval("(-2.9).to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "-2");
+
+        let result: BigInt = engine.eval("1e30.to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "1000000000000000019884624838656");
+
+        // non-finite floats should be rejected
+        let result = engine.eval::<BigInt>("(1.0 / 0.0).to_bigint()");
+        assert!(result.is_err(), "infinity should be rejected");
+
+        let result = engine.eval::<BigInt>("(0.0 / 0.0).to_bigint()");
+        assert!(result.is_err(), "NaN should be rejected");
     }
 
     #[test]
