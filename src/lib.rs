@@ -203,7 +203,7 @@ def_package! {
 
 #[cfg(test)]
 mod tests {
-    use rhai::{Engine, packages::Package};
+    use rhai::{packages::Package, Engine};
 
     use super::*;
 
