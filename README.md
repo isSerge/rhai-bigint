@@ -40,7 +40,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.5"
+rhai-bigint = "0.1.8"
 ```
 
 ### Feature Flags
