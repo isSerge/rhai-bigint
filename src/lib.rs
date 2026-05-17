@@ -312,6 +312,20 @@ mod tests {
 
     use super::*;
 
+    /// Asserts that `script` produces a runtime error whose message contains
+    /// `expected_fragment`, giving a clear failure message if either the eval
+    /// succeeds or the error text doesn't match.
+    #[track_caller]
+    fn assert_cmp_error(engine: &Engine, script: &str, expected_fragment: &str) {
+        match engine.eval::<bool>(script) {
+            Ok(v) => panic!("expected error for `{script}`, got Ok({v})"),
+            Err(e) => assert!(
+                e.to_string().contains(expected_fragment),
+                "script `{script}`\n  expected fragment: {expected_fragment:?}\n  actual error:    {e}"
+            ),
+        }
+    }
+
     #[test]
     fn test_rhai_integration() {
         let mut engine = Engine::new();
@@ -572,28 +586,92 @@ mod tests {
         BigIntPackage::new().register_into_engine(&mut engine);
 
         // BigInt == int (both directions)
-        assert!(engine.eval::<bool>("parse_bigint(42) == 42").is_err());
-        assert!(engine.eval::<bool>("parse_bigint(42) != 42").is_err());
-        assert!(engine.eval::<bool>("42 == parse_bigint(42)").is_err());
-        assert!(engine.eval::<bool>("42 != parse_bigint(42)").is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42",
+            "Cannot compare BigInt with int",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) != 42",
+            "Cannot compare BigInt with int",
+        );
+        assert_cmp_error(
+            &engine,
+            "42 == parse_bigint(42)",
+            "Cannot compare int with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "42 != parse_bigint(42)",
+            "Cannot compare int with BigInt",
+        );
 
         // BigInt == float (both directions)
-        assert!(engine.eval::<bool>("parse_bigint(42) == 42.0").is_err());
-        assert!(engine.eval::<bool>("parse_bigint(42) != 42.0").is_err());
-        assert!(engine.eval::<bool>("42.0 == parse_bigint(42)").is_err());
-        assert!(engine.eval::<bool>("42.0 != parse_bigint(42)").is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42.0",
+            "Cannot compare BigInt with float",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) != 42.0",
+            "Cannot compare BigInt with float",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.0 == parse_bigint(42)",
+            "Cannot compare float with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.0 != parse_bigint(42)",
+            "Cannot compare float with BigInt",
+        );
 
         // BigInt == string (both directions)
-        assert!(engine.eval::<bool>("parse_bigint(42) == \"42\"").is_err());
-        assert!(engine.eval::<bool>("parse_bigint(42) != \"42\"").is_err());
-        assert!(engine.eval::<bool>("\"42\" == parse_bigint(42)").is_err());
-        assert!(engine.eval::<bool>("\"42\" != parse_bigint(42)").is_err());
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) == "42""#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) != "42""#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#""42" == parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            r#""42" != parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
 
         // BigInt == bool (both directions)
-        assert!(engine.eval::<bool>("parse_bigint(1) == true").is_err());
-        assert!(engine.eval::<bool>("parse_bigint(1) != true").is_err());
-        assert!(engine.eval::<bool>("true == parse_bigint(1)").is_err());
-        assert!(engine.eval::<bool>("true != parse_bigint(1)").is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(1) == true",
+            "Cannot compare BigInt with bool",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(1) != true",
+            "Cannot compare BigInt with bool",
+        );
+        assert_cmp_error(
+            &engine,
+            "true == parse_bigint(1)",
+            "Cannot compare bool with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "true != parse_bigint(1)",
+            "Cannot compare bool with BigInt",
+        );
 
         // BigInt == BigInt still works correctly
         assert!(engine
@@ -611,41 +689,73 @@ mod tests {
 
         // int — all four operators, both directions
         for op in ["<", "<=", ">", ">="] {
-            let lhs = format!("parse_bigint(42) {op} 42");
-            let rhs = format!("42 {op} parse_bigint(42)");
-            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
-            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(42) {op} 42"),
+                "Cannot compare BigInt with int",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("42 {op} parse_bigint(42)"),
+                "Cannot compare int with BigInt",
+            );
         }
 
         // float — all four operators, both directions
         for op in ["<", "<=", ">", ">="] {
-            let lhs = format!("parse_bigint(42) {op} 42.0");
-            let rhs = format!("42.0 {op} parse_bigint(42)");
-            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
-            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(42) {op} 42.0"),
+                "Cannot compare BigInt with float",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("42.0 {op} parse_bigint(42)"),
+                "Cannot compare float with BigInt",
+            );
         }
 
-        // string — spot-check each operator
+        // string — all four operators, both directions
         for op in ["<", "<=", ">", ">="] {
-            let lhs = format!(r#"parse_bigint(42) {op} "42""#);
-            let rhs = format!(r#""42" {op} parse_bigint(42)"#);
-            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
-            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+            assert_cmp_error(
+                &engine,
+                &format!(r#"parse_bigint(42) {op} "42""#),
+                "Cannot compare BigInt with string",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!(r#""42" {op} parse_bigint(42)"#),
+                "Cannot compare string with BigInt",
+            );
         }
 
-        // bool — spot-check each operator
+        // bool — all four operators, both directions
         for op in ["<", "<=", ">", ">="] {
-            let lhs = format!("parse_bigint(1) {op} true");
-            let rhs = format!("true {op} parse_bigint(1)");
-            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
-            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(1) {op} true"),
+                "Cannot compare BigInt with bool",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("true {op} parse_bigint(1)"),
+                "Cannot compare bool with BigInt",
+            );
         }
 
         // BigInt ordering among themselves still works
-        assert!(engine.eval::<bool>("parse_bigint(1) < parse_bigint(2)").unwrap());
-        assert!(engine.eval::<bool>("parse_bigint(2) > parse_bigint(1)").unwrap());
-        assert!(engine.eval::<bool>("parse_bigint(1) <= parse_bigint(1)").unwrap());
-        assert!(engine.eval::<bool>("parse_bigint(1) >= parse_bigint(1)").unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) < parse_bigint(2)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(2) > parse_bigint(1)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) <= parse_bigint(1)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) >= parse_bigint(1)")
+            .unwrap());
     }
 
     /// All string-producing expressions in Rhai yield `ImmutableString` at
@@ -657,32 +767,54 @@ mod tests {
 
         // String literal (base case — already in the general test, repeated here
         // for clarity as the baseline for the variants below)
-        assert!(engine.eval::<bool>(r#"parse_bigint(42) == "42""#).is_err());
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) == "42""#,
+            "Cannot compare BigInt with string",
+        );
 
         // String stored in a variable
-        assert!(engine
-            .eval::<bool>(r#"let s = "42"; parse_bigint(42) == s"#)
-            .is_err());
-        assert!(engine
-            .eval::<bool>(r#"let s = "42"; s == parse_bigint(42)"#)
-            .is_err());
+        assert_cmp_error(
+            &engine,
+            r#"let s = "42"; parse_bigint(42) == s"#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#"let s = "42"; s == parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
 
         // String returned from a built-in function call (to_string on a plain int)
-        assert!(engine
-            .eval::<bool>("parse_bigint(42) == 42.to_string()")
-            .is_err());
-        assert!(engine
-            .eval::<bool>("42.to_string() == parse_bigint(42)")
-            .is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42.to_string()",
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.to_string() == parse_bigint(42)",
+            "Cannot compare string with BigInt",
+        );
 
         // String produced by to_string() on a BigInt itself
-        assert!(engine
-            .eval::<bool>("parse_bigint(42) == parse_bigint(42).to_string()")
-            .is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == parse_bigint(42).to_string()",
+            "Cannot compare BigInt with string",
+        );
 
         // Template string / interpolation
-        assert!(engine.eval::<bool>("parse_bigint(42) == `${42}`").is_err());
-        assert!(engine.eval::<bool>("`${42}` == parse_bigint(42)").is_err());
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == `${42}`",
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            "`${42}` == parse_bigint(42)",
+            "Cannot compare string with BigInt",
+        );
     }
 
     #[test]
