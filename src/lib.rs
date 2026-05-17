@@ -36,6 +36,46 @@ macro_rules! bigint_cross_type_cmp_module {
             pub fn ne_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
                 Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
             }
+
+            #[rhai_fn(name = "<", pure, return_raw)]
+            pub fn lt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+            }
+
+            #[rhai_fn(name = "<=", pure, return_raw)]
+            pub fn le_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+            }
+
+            #[rhai_fn(name = ">", pure, return_raw)]
+            pub fn gt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+            }
+
+            #[rhai_fn(name = ">=", pure, return_raw)]
+            pub fn ge_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+            }
+
+            #[rhai_fn(name = "<", pure, return_raw)]
+            pub fn lt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+            }
+
+            #[rhai_fn(name = "<=", pure, return_raw)]
+            pub fn le_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+            }
+
+            #[rhai_fn(name = ">", pure, return_raw)]
+            pub fn gt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+            }
+
+            #[rhai_fn(name = ">=", pure, return_raw)]
+            pub fn ge_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+            }
         }
     };
 }
@@ -562,6 +602,50 @@ mod tests {
         assert!(!engine
             .eval::<bool>("parse_bigint(42) != parse_bigint(42)")
             .unwrap());
+    }
+
+    #[test]
+    fn test_cross_type_ordering_errors() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // int — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            let lhs = format!("parse_bigint(42) {op} 42");
+            let rhs = format!("42 {op} parse_bigint(42)");
+            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
+            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+        }
+
+        // float — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            let lhs = format!("parse_bigint(42) {op} 42.0");
+            let rhs = format!("42.0 {op} parse_bigint(42)");
+            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
+            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+        }
+
+        // string — spot-check each operator
+        for op in ["<", "<=", ">", ">="] {
+            let lhs = format!(r#"parse_bigint(42) {op} "42""#);
+            let rhs = format!(r#""42" {op} parse_bigint(42)"#);
+            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
+            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+        }
+
+        // bool — spot-check each operator
+        for op in ["<", "<=", ">", ">="] {
+            let lhs = format!("parse_bigint(1) {op} true");
+            let rhs = format!("true {op} parse_bigint(1)");
+            assert!(engine.eval::<bool>(&lhs).is_err(), "should error: {lhs}");
+            assert!(engine.eval::<bool>(&rhs).is_err(), "should error: {rhs}");
+        }
+
+        // BigInt ordering among themselves still works
+        assert!(engine.eval::<bool>("parse_bigint(1) < parse_bigint(2)").unwrap());
+        assert!(engine.eval::<bool>("parse_bigint(2) > parse_bigint(1)").unwrap());
+        assert!(engine.eval::<bool>("parse_bigint(1) <= parse_bigint(1)").unwrap());
+        assert!(engine.eval::<bool>("parse_bigint(1) >= parse_bigint(1)").unwrap());
     }
 
     /// All string-producing expressions in Rhai yield `ImmutableString` at
