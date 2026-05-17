@@ -40,7 +40,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.8"
+rhai-bigint = "0.1.9"
 ```
 
 ### Feature Flags
@@ -114,6 +114,29 @@ if price >= threshold {
     print("Threshold met!");
 }
 ```
+
+#### Cross-type comparisons are errors
+
+Comparing a `BigInt` with any other type (`int`, `float`, `string`, `bool`) raises a
+runtime error rather than silently returning `false`. This prevents subtle bugs where
+a mismatched comparison always evaluates to `false` without any indication that
+something is wrong.
+
+```js
+// ❌ Runtime error — wrap the int first
+parse_bigint(42) == 42
+
+// ❌ Runtime error — convert the float first
+parse_bigint(42) == 42.0
+
+// ❌ Runtime error — parse the string first
+parse_bigint(42) == "42"
+
+// ✅ Correct — compare two BigInts
+parse_bigint(42) == parse_bigint(42)
+```
+
+The same rule applies when the `BigInt` is on the right-hand side (`42 == parse_bigint(42)`).
 
 ## Bridging Rust and Rhai
 
