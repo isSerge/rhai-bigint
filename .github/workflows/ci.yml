@@ -3,10 +3,17 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - ""           # default (INT = i64)
+          - "only_i32"   # INT = i32
+          - "sync"
+          - "sync,only_i32"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo update 
-      - run: cargo test --all-features
+      - run: cargo update
+      - run: cargo test ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }}
       - run: cargo fmt -- --check
-      - run: cargo clippy -- -D warnings
+      - run: cargo clippy ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }} -- -D warnings
