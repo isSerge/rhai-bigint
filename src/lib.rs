@@ -229,14 +229,14 @@ bigint_cross_type_cmp_module!(
     bigint_int_cmp,
     rhai::INT,
     "int",
-    "wrap the int first: parse_bigint(42) == parse_bigint(42)"
+    "wrap the int first: x == parse_bigint(42)"
 );
 
 bigint_cross_type_cmp_module!(
     bigint_float_cmp,
     rhai::FLOAT,
     "float",
-    "convert the float first: parse_bigint(42.0) == parse_bigint(42)"
+    "convert the float first: x == parse_bigint(42)"
 );
 
 bigint_cross_type_cmp_module!(
