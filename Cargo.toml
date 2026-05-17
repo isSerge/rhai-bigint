@@ -12,6 +12,7 @@ categories = ["api-bindings", "mathematics"]
 [features]
 default = []
 sync = ["rhai/sync"]
+only_i32 = ["rhai/only_i32"]
 
 [dependencies]
 num-bigint = "0.4.5"

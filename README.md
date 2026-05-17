@@ -46,6 +46,7 @@ rhai-bigint = "0.1.9"
 ### Feature Flags
 
 *   `sync`: Enables `rhai/sync` support. Turn this on if your Rhai engine requires thread-safe types (e.g., when evaluating scripts across a Tokio thread pool).
+*   `only_i32`: Passes `rhai/only_i32` through, making `rhai::INT` an `i32` instead of the default `i64`. All integer-accepting functions (`parse_bigint`, `to_bigint`, `**`, `<<`, `>>`) adapt automatically.
 
 ## Usage
 

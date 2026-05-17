@@ -9,7 +9,7 @@ use num_bigint::BigInt;
 use rhai::{def_package, plugin::*};
 
 /// Generates an `#[export_module]` that raises a runtime error whenever a `BigInt`
-/// is compared via `==` or `!=` with `$t`, in either operand order.
+/// is compared (via `==`, `!=`, `<`, `<=`, `>`, or `>=`) with `$t`, in either operand order.
 macro_rules! bigint_cross_type_cmp_module {
     ($mod_name:ident, $t:ty, $type_name:literal, $advice:literal) => {
         #[export_module]
@@ -87,7 +87,7 @@ mod bigint_functions {
     use rhai::INT;
 
     /// Creates a `BigInt` from an integer.
-    pub fn parse_bigint(value: i64) -> BigInt {
+    pub fn parse_bigint(value: INT) -> BigInt {
         value.into()
     }
 
@@ -108,7 +108,7 @@ mod bigint_functions {
 
     /// Converts an integer to a `BigInt` via method-call syntax: `42.to_bigint()`.
     #[rhai_fn(name = "to_bigint", pure)]
-    pub fn i64_to_bigint(value: &mut i64) -> BigInt {
+    pub fn int_to_bigint(value: &mut INT) -> BigInt {
         BigInt::from(*value)
     }
 
@@ -159,9 +159,12 @@ mod bigint_functions {
     /// Raises a `BigInt` to an integer power. The exponent must be non-negative
     /// and fit in a `u32`; returns an error otherwise.
     #[rhai_fn(name = "**", pure, return_raw)]
-    pub fn pow(base: &mut BigInt, exp: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    pub fn pow(base: &mut BigInt, exp: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        if exp < 0 {
+            return Err(format!("Exponent must be non-negative, got {exp}").into());
+        }
         let exp_u32 = u32::try_from(exp).map_err(|_| -> Box<rhai::EvalAltResult> {
-            format!("Exponent must be a non-negative integer that fits in u32, got {exp}").into()
+            format!("Exponent {exp} is too large, must be at most {}", u32::MAX).into()
         })?;
         Ok(base.clone().pow(exp_u32))
     }
@@ -354,8 +357,12 @@ mod tests {
         assert!(result);
     }
 
+    // Integer literals like 1_000_000_000_000_000_000 exceed i32::MAX and are
+    // rejected by the Rhai parser under `only_i32`. Use `parse_bigint("…")` for
+    // large-value tests that must run in both configurations.
+    #[cfg(not(feature = "only_i32"))]
     #[test]
-    fn test_core_functionality() {
+    fn test_core_arithmetic_i64_literals() {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
@@ -383,6 +390,71 @@ mod tests {
         assert_eq!(result.to_string(), "1");
 
         let result: BigInt = engine.eval("-parse_bigint(42)").unwrap();
+        assert_eq!(result.to_string(), "-42");
+    }
+
+    // Verify that INT-dispatch functions (`parse_bigint(INT)`, `.to_bigint()`,
+    // `**`, `<<`) work correctly at i32::MAX and i32::MIN boundaries.
+    #[cfg(feature = "only_i32")]
+    #[test]
+    fn test_only_i32_int_dispatch_boundaries() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // parse_bigint(INT) at i32::MAX / i32::MIN
+        let result: BigInt = engine.eval("parse_bigint(2147483647)").unwrap();
+        assert_eq!(result.to_string(), "2147483647");
+
+        let result: BigInt = engine.eval("parse_bigint(-2147483648)").unwrap();
+        assert_eq!(result.to_string(), "-2147483648");
+
+        // int.to_bigint() at i32::MAX
+        let result: BigInt = engine.eval("(2147483647).to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "2147483647");
+
+        // pow with INT exponent: 2 ** 30 (largest safe i32 exponent)
+        let result: BigInt = engine.eval("parse_bigint(2) ** 30").unwrap();
+        assert_eq!(result.to_string(), "1073741824");
+
+        // shift with INT shift amount: 1 << 31
+        let result: BigInt = engine.eval("parse_bigint(1) << 31").unwrap();
+        assert_eq!(result.to_string(), "2147483648");
+    }
+
+    // Equivalent arithmetic coverage using string-based construction so that
+    // large values work even when rhai::INT = i32 (the `only_i32` feature).
+    #[cfg(feature = "only_i32")]
+    #[test]
+    fn test_core_arithmetic_string_literals() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000000000000000") + parse_bigint("2000000000000000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "3000000000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("5000000000000000000") - parse_bigint("1000000000000000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "4000000000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000") * parse_bigint("1000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000000000") / parse_bigint("1000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("10") % parse_bigint("3")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        let result: BigInt = engine.eval(r#"-parse_bigint("42")"#).unwrap();
         assert_eq!(result.to_string(), "-42");
     }
 
