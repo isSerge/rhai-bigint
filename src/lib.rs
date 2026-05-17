@@ -564,6 +564,43 @@ mod tests {
             .unwrap());
     }
 
+    /// All string-producing expressions in Rhai yield `ImmutableString` at
+    /// runtime, so every variant hits the same cross-type guard.
+    #[test]
+    fn test_cross_type_string_variants() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // String literal (base case — already in the general test, repeated here
+        // for clarity as the baseline for the variants below)
+        assert!(engine.eval::<bool>(r#"parse_bigint(42) == "42""#).is_err());
+
+        // String stored in a variable
+        assert!(engine
+            .eval::<bool>(r#"let s = "42"; parse_bigint(42) == s"#)
+            .is_err());
+        assert!(engine
+            .eval::<bool>(r#"let s = "42"; s == parse_bigint(42)"#)
+            .is_err());
+
+        // String returned from a built-in function call (to_string on a plain int)
+        assert!(engine
+            .eval::<bool>("parse_bigint(42) == 42.to_string()")
+            .is_err());
+        assert!(engine
+            .eval::<bool>("42.to_string() == parse_bigint(42)")
+            .is_err());
+
+        // String produced by to_string() on a BigInt itself
+        assert!(engine
+            .eval::<bool>("parse_bigint(42) == parse_bigint(42).to_string()")
+            .is_err());
+
+        // Template string / interpolation
+        assert!(engine.eval::<bool>("parse_bigint(42) == `${42}`").is_err());
+        assert!(engine.eval::<bool>("`${42}` == parse_bigint(42)").is_err());
+    }
+
     #[test]
     fn test_to_float() {
         let mut engine = Engine::new();
