@@ -8,6 +8,17 @@
 use num_bigint::BigInt;
 use rhai::{def_package, plugin::*};
 
+/// Builds a "Cannot compare {lhs} with {rhs}; {advice}" runtime error.
+#[cold]
+#[inline(never)]
+fn cross_type_cmp_err(
+    lhs: &'static str,
+    rhs: &'static str,
+    advice: &'static str,
+) -> Box<rhai::EvalAltResult> {
+    format!("Cannot compare {lhs} with {rhs}; {advice}").into()
+}
+
 /// Generates an `#[export_module]` that raises a runtime error whenever a `BigInt`
 /// is compared (via `==`, `!=`, `<`, `<=`, `>`, or `>=`) with `$t`, in either operand order.
 macro_rules! bigint_cross_type_cmp_module {
@@ -19,62 +30,62 @@ macro_rules! bigint_cross_type_cmp_module {
 
             #[rhai_fn(name = "==", pure, return_raw)]
             pub fn eq_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = "!=", pure, return_raw)]
             pub fn ne_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = "==", pure, return_raw)]
             pub fn eq_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
 
             #[rhai_fn(name = "!=", pure, return_raw)]
             pub fn ne_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
 
             #[rhai_fn(name = "<", pure, return_raw)]
             pub fn lt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = "<=", pure, return_raw)]
             pub fn le_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = ">", pure, return_raw)]
             pub fn gt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = ">=", pure, return_raw)]
             pub fn ge_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare BigInt with ", $type_name, "; ", $advice).into())
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
             }
 
             #[rhai_fn(name = "<", pure, return_raw)]
             pub fn lt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
 
             #[rhai_fn(name = "<=", pure, return_raw)]
             pub fn le_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
 
             #[rhai_fn(name = ">", pure, return_raw)]
             pub fn gt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
 
             #[rhai_fn(name = ">=", pure, return_raw)]
             pub fn ge_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
-                Err(concat!("Cannot compare ", $type_name, " with BigInt; ", $advice).into())
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
             }
         }
     };
