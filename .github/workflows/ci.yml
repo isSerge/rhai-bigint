@@ -1,19 +1,26 @@
 name: CI
 on: [push, pull_request]
 jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo fmt -- --check
+
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        features:
-          - ""           # default (INT = i64)
-          - "only_i32"   # INT = i32
-          - "sync"
-          - "sync,only_i32"
+        include:
+          - flags: ""                          # default (INT = i64)
+          - flags: "--features only_i32"       # INT = i32
+          - flags: "--features sync"
+          - flags: "--features sync,only_i32"
+          - flags: "--all-features"            # for any future features
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo update
-      - run: cargo test ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }}
-      - run: cargo fmt -- --check
-      - run: cargo clippy ${{ matrix.features != '' && format('--features {0}', matrix.features) || '' }} -- -D warnings
+      - run: cargo test ${{ matrix.flags }}
+      - run: cargo clippy ${{ matrix.flags }} -- -D warnings
