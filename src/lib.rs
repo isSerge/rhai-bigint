@@ -8,13 +8,97 @@
 use num_bigint::BigInt;
 use rhai::{def_package, plugin::*};
 
+/// Builds a "Cannot compare {lhs} with {rhs}; {advice}" runtime error.
+#[cold]
+#[inline(never)]
+fn cross_type_cmp_err(
+    lhs: &'static str,
+    rhs: &'static str,
+    advice: &'static str,
+) -> Box<rhai::EvalAltResult> {
+    format!("Cannot compare {lhs} with {rhs}; {advice}").into()
+}
+
+/// Generates an `#[export_module]` that raises a runtime error whenever a `BigInt`
+/// is compared (via `==`, `!=`, `<`, `<=`, `>`, or `>=`) with `$t`, in either operand order.
+macro_rules! bigint_cross_type_cmp_module {
+    ($mod_name:ident, $t:ty, $type_name:literal, $advice:literal) => {
+        #[export_module]
+        pub(crate) mod $mod_name {
+            use num_bigint::BigInt;
+            use rhai::plugin::*;
+
+            #[rhai_fn(name = "==", pure, return_raw)]
+            pub fn eq_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = "!=", pure, return_raw)]
+            pub fn ne_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = "==", pure, return_raw)]
+            pub fn eq_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+
+            #[rhai_fn(name = "!=", pure, return_raw)]
+            pub fn ne_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+
+            #[rhai_fn(name = "<", pure, return_raw)]
+            pub fn lt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = "<=", pure, return_raw)]
+            pub fn le_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = ">", pure, return_raw)]
+            pub fn gt_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = ">=", pure, return_raw)]
+            pub fn ge_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err("BigInt", $type_name, $advice))
+            }
+
+            #[rhai_fn(name = "<", pure, return_raw)]
+            pub fn lt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+
+            #[rhai_fn(name = "<=", pure, return_raw)]
+            pub fn le_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+
+            #[rhai_fn(name = ">", pure, return_raw)]
+            pub fn gt_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+
+            #[rhai_fn(name = ">=", pure, return_raw)]
+            pub fn ge_type(_l: &mut $t, _r: BigInt) -> Result<bool, Box<rhai::EvalAltResult>> {
+                Err(crate::cross_type_cmp_err($type_name, "BigInt", $advice))
+            }
+        }
+    };
+}
+
 #[export_module]
 mod bigint_functions {
     use num_bigint::{BigInt, Sign};
     use num_traits::{FromPrimitive, ToPrimitive, Zero};
+    use rhai::INT;
 
     /// Creates a `BigInt` from an integer.
-    pub fn parse_bigint(value: i64) -> BigInt {
+    pub fn parse_bigint(value: INT) -> BigInt {
         value.into()
     }
 
@@ -30,12 +114,12 @@ mod bigint_functions {
     pub fn parse_bigint_from_str(value: String) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         value
             .parse::<BigInt>()
-            .map_err(|e| format!("Failed to create BigInt from string: {e}").into())
+            .map_err(|e| format!("Cannot parse {value:?} as BigInt: {e}").into())
     }
 
     /// Converts an integer to a `BigInt` via method-call syntax: `42.to_bigint()`.
     #[rhai_fn(name = "to_bigint", pure)]
-    pub fn i64_to_bigint(value: &mut i64) -> BigInt {
+    pub fn int_to_bigint(value: &mut INT) -> BigInt {
         BigInt::from(*value)
     }
 
@@ -86,9 +170,16 @@ mod bigint_functions {
     /// Raises a `BigInt` to an integer power. The exponent must be non-negative
     /// and fit in a `u32`; returns an error otherwise.
     #[rhai_fn(name = "**", pure, return_raw)]
-    pub fn pow(base: &mut BigInt, exp: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    pub fn pow(base: &mut BigInt, exp: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        // The `exp < 0` branch is intentionally kept separate from the
+        // `u32::try_from` below. Both would reject negative values, but
+        // `try_from` would produce a generic "too large" message. The explicit
+        // branch gives users a clearer "must be non-negative" diagnostic.
+        if exp < 0 {
+            return Err(format!("Exponent must be non-negative, got {exp}").into());
+        }
         let exp_u32 = u32::try_from(exp).map_err(|_| -> Box<rhai::EvalAltResult> {
-            format!("Exponent must be a non-negative integer that fits in u32, got {exp}").into()
+            format!("Exponent {exp} is too large, must be at most {}", u32::MAX).into()
         })?;
         Ok(base.clone().pow(exp_u32))
     }
@@ -108,7 +199,10 @@ mod bigint_functions {
         l.clone() ^ r
     }
 
-    fn validate_shift_amount(shift: i64) -> Result<u32, Box<rhai::EvalAltResult>> {
+    fn validate_shift_amount(shift: INT) -> Result<u32, Box<rhai::EvalAltResult>> {
+        // Explicit negative check for the same reason as in `pow`: `try_from`
+        // would also reject negatives, but with a "too large" message instead
+        // of the more accurate "must be non-negative" one.
         if shift < 0 {
             return Err(format!("Shift amount must be non-negative, got {shift}").into());
         }
@@ -120,14 +214,14 @@ mod bigint_functions {
 
     /// Left-shifts a `BigInt` by `shift` bits. `shift` must be non-negative and fit in `u32`.
     #[rhai_fn(name = "<<", pure, return_raw)]
-    pub fn shl(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    pub fn shl(value: &mut BigInt, shift: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         let shift_u32 = validate_shift_amount(shift)?;
         Ok(value.clone() << shift_u32)
     }
 
     /// Right-shifts a `BigInt` by `shift` bits. `shift` must be non-negative and fit in `u32`.
     #[rhai_fn(name = ">>", pure, return_raw)]
-    pub fn shr(value: &mut BigInt, shift: i64) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+    pub fn shr(value: &mut BigInt, shift: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         let shift_u32 = validate_shift_amount(shift)?;
         Ok(value.clone() >> shift_u32)
     }
@@ -188,9 +282,39 @@ mod bigint_functions {
             .to_f64()
             .map(|f| f as rhai::FLOAT)
             .filter(|f| f.is_finite())
-            .ok_or_else(|| "BigInt value is too large to represent as a finite float".into())
+            .ok_or_else(|| {
+                "BigInt value is out of range for float (magnitude overflows to infinity)".into()
+            })
     }
 }
+
+bigint_cross_type_cmp_module!(
+    bigint_int_cmp,
+    rhai::INT,
+    "int",
+    "wrap the int first: x == parse_bigint(42)"
+);
+
+bigint_cross_type_cmp_module!(
+    bigint_float_cmp,
+    rhai::FLOAT,
+    "float",
+    "convert the float to BigInt first via to_bigint() (truncates toward zero): x.to_bigint() == y"
+);
+
+bigint_cross_type_cmp_module!(
+    bigint_string_cmp,
+    rhai::ImmutableString,
+    "string",
+    r#"parse both sides first: parse_bigint(x) == parse_bigint(y)"#
+);
+
+bigint_cross_type_cmp_module!(
+    bigint_bool_cmp,
+    bool,
+    "bool",
+    "convert the BigInt to int first if a boolean check is needed: x != parse_bigint(0)"
+);
 
 def_package! {
     /// Arbitrary-precision BigInt for Rhai: `bigint()` constructor plus
@@ -198,6 +322,10 @@ def_package! {
     pub BigIntPackage(lib) {
         lib.set_custom_type::<BigInt>("BigInt");
         combine_with_exported_module!(lib, "bigint", bigint_functions);
+        combine_with_exported_module!(lib, "bigint_int_cmp", bigint_int_cmp);
+        combine_with_exported_module!(lib, "bigint_float_cmp", bigint_float_cmp);
+        combine_with_exported_module!(lib, "bigint_string_cmp", bigint_string_cmp);
+        combine_with_exported_module!(lib, "bigint_bool_cmp", bigint_bool_cmp);
     }
 }
 
@@ -206,6 +334,20 @@ mod tests {
     use rhai::{packages::Package, Engine};
 
     use super::*;
+
+    /// Asserts that `script` produces a runtime error whose message contains
+    /// `expected_fragment`, giving a clear failure message if either the eval
+    /// succeeds or the error text doesn't match.
+    #[track_caller]
+    fn assert_cmp_error(engine: &Engine, script: &str, expected_fragment: &str) {
+        match engine.eval::<bool>(script) {
+            Ok(v) => panic!("expected error for `{script}`, got Ok({v})"),
+            Err(e) => assert!(
+                e.to_string().contains(expected_fragment),
+                "script `{script}`\n  expected fragment: {expected_fragment:?}\n  actual error:    {e}"
+            ),
+        }
+    }
 
     #[test]
     fn test_rhai_integration() {
@@ -235,8 +377,12 @@ mod tests {
         assert!(result);
     }
 
+    // Integer literals like 1_000_000_000_000_000_000 exceed i32::MAX and are
+    // rejected by the Rhai parser under `only_i32`. Use `parse_bigint("…")` for
+    // large-value tests that must run in both configurations.
+    #[cfg(not(feature = "only_i32"))]
     #[test]
-    fn test_core_functionality() {
+    fn test_core_arithmetic_i64_literals() {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
@@ -264,6 +410,71 @@ mod tests {
         assert_eq!(result.to_string(), "1");
 
         let result: BigInt = engine.eval("-parse_bigint(42)").unwrap();
+        assert_eq!(result.to_string(), "-42");
+    }
+
+    // Verify that INT-dispatch functions (`parse_bigint(INT)`, `.to_bigint()`,
+    // `**`, `<<`) work correctly at i32::MAX and i32::MIN boundaries.
+    #[cfg(feature = "only_i32")]
+    #[test]
+    fn test_only_i32_int_dispatch_boundaries() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // parse_bigint(INT) at i32::MAX / i32::MIN
+        let result: BigInt = engine.eval("parse_bigint(2147483647)").unwrap();
+        assert_eq!(result.to_string(), "2147483647");
+
+        let result: BigInt = engine.eval("parse_bigint(-2147483648)").unwrap();
+        assert_eq!(result.to_string(), "-2147483648");
+
+        // int.to_bigint() at i32::MAX
+        let result: BigInt = engine.eval("(2147483647).to_bigint()").unwrap();
+        assert_eq!(result.to_string(), "2147483647");
+
+        // pow with INT exponent: 2 ** 30 (largest safe i32 exponent)
+        let result: BigInt = engine.eval("parse_bigint(2) ** 30").unwrap();
+        assert_eq!(result.to_string(), "1073741824");
+
+        // shift with INT shift amount: 1 << 31
+        let result: BigInt = engine.eval("parse_bigint(1) << 31").unwrap();
+        assert_eq!(result.to_string(), "2147483648");
+    }
+
+    // Equivalent arithmetic coverage using string-based construction so that
+    // large values work even when rhai::INT = i32 (the `only_i32` feature).
+    #[cfg(feature = "only_i32")]
+    #[test]
+    fn test_core_arithmetic_string_literals() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000000000000000") + parse_bigint("2000000000000000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "3000000000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("5000000000000000000") - parse_bigint("1000000000000000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "4000000000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000") * parse_bigint("1000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1000000000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("1000000000000") / parse_bigint("1000000")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1000000");
+
+        let result: BigInt = engine
+            .eval(r#"parse_bigint("10") % parse_bigint("3")"#)
+            .unwrap();
+        assert_eq!(result.to_string(), "1");
+
+        let result: BigInt = engine.eval(r#"-parse_bigint("42")"#).unwrap();
         assert_eq!(result.to_string(), "-42");
     }
 
@@ -459,6 +670,243 @@ mod tests {
 
         let result = engine.eval::<BigInt>("parse_bigint(1) >> -1");
         assert!(result.is_err(), "negative right-shift should be rejected");
+    }
+
+    #[test]
+    fn test_cross_type_equality_errors() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // BigInt == int (both directions)
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42",
+            "Cannot compare BigInt with int",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) != 42",
+            "Cannot compare BigInt with int",
+        );
+        assert_cmp_error(
+            &engine,
+            "42 == parse_bigint(42)",
+            "Cannot compare int with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "42 != parse_bigint(42)",
+            "Cannot compare int with BigInt",
+        );
+
+        // BigInt == float (both directions)
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42.0",
+            "Cannot compare BigInt with float",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) != 42.0",
+            "Cannot compare BigInt with float",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.0 == parse_bigint(42)",
+            "Cannot compare float with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.0 != parse_bigint(42)",
+            "Cannot compare float with BigInt",
+        );
+
+        // BigInt == string (both directions)
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) == "42""#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) != "42""#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#""42" == parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            r#""42" != parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
+
+        // BigInt == bool (both directions)
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(1) == true",
+            "Cannot compare BigInt with bool",
+        );
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(1) != true",
+            "Cannot compare BigInt with bool",
+        );
+        assert_cmp_error(
+            &engine,
+            "true == parse_bigint(1)",
+            "Cannot compare bool with BigInt",
+        );
+        assert_cmp_error(
+            &engine,
+            "true != parse_bigint(1)",
+            "Cannot compare bool with BigInt",
+        );
+
+        // BigInt == BigInt still works correctly
+        assert!(engine
+            .eval::<bool>("parse_bigint(42) == parse_bigint(42)")
+            .unwrap());
+        assert!(!engine
+            .eval::<bool>("parse_bigint(42) != parse_bigint(42)")
+            .unwrap());
+    }
+
+    #[test]
+    fn test_cross_type_ordering_errors() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // int — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(42) {op} 42"),
+                "Cannot compare BigInt with int",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("42 {op} parse_bigint(42)"),
+                "Cannot compare int with BigInt",
+            );
+        }
+
+        // float — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(42) {op} 42.0"),
+                "Cannot compare BigInt with float",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("42.0 {op} parse_bigint(42)"),
+                "Cannot compare float with BigInt",
+            );
+        }
+
+        // string — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            assert_cmp_error(
+                &engine,
+                &format!(r#"parse_bigint(42) {op} "42""#),
+                "Cannot compare BigInt with string",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!(r#""42" {op} parse_bigint(42)"#),
+                "Cannot compare string with BigInt",
+            );
+        }
+
+        // bool — all four operators, both directions
+        for op in ["<", "<=", ">", ">="] {
+            assert_cmp_error(
+                &engine,
+                &format!("parse_bigint(1) {op} true"),
+                "Cannot compare BigInt with bool",
+            );
+            assert_cmp_error(
+                &engine,
+                &format!("true {op} parse_bigint(1)"),
+                "Cannot compare bool with BigInt",
+            );
+        }
+
+        // BigInt ordering among themselves still works
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) < parse_bigint(2)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(2) > parse_bigint(1)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) <= parse_bigint(1)")
+            .unwrap());
+        assert!(engine
+            .eval::<bool>("parse_bigint(1) >= parse_bigint(1)")
+            .unwrap());
+    }
+
+    /// All string-producing expressions in Rhai yield `ImmutableString` at
+    /// runtime, so every variant hits the same cross-type guard.
+    #[test]
+    fn test_cross_type_string_variants() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // String literal (base case — already in the general test, repeated here
+        // for clarity as the baseline for the variants below)
+        assert_cmp_error(
+            &engine,
+            r#"parse_bigint(42) == "42""#,
+            "Cannot compare BigInt with string",
+        );
+
+        // String stored in a variable
+        assert_cmp_error(
+            &engine,
+            r#"let s = "42"; parse_bigint(42) == s"#,
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            r#"let s = "42"; s == parse_bigint(42)"#,
+            "Cannot compare string with BigInt",
+        );
+
+        // String returned from a built-in function call (to_string on a plain int)
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == 42.to_string()",
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            "42.to_string() == parse_bigint(42)",
+            "Cannot compare string with BigInt",
+        );
+
+        // String produced by to_string() on a BigInt itself
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == parse_bigint(42).to_string()",
+            "Cannot compare BigInt with string",
+        );
+
+        // Template string / interpolation
+        assert_cmp_error(
+            &engine,
+            "parse_bigint(42) == `${42}`",
+            "Cannot compare BigInt with string",
+        );
+        assert_cmp_error(
+            &engine,
+            "`${42}` == parse_bigint(42)",
+            "Cannot compare string with BigInt",
+        );
     }
 
     #[test]

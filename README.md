@@ -40,12 +40,13 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 rhai = "1.22.2"
-rhai-bigint = "0.1.8"
+rhai-bigint = "0.1.9"
 ```
 
 ### Feature Flags
 
 *   `sync`: Enables `rhai/sync` support. Turn this on if your Rhai engine requires thread-safe types (e.g., when evaluating scripts across a Tokio thread pool).
+*   `only_i32`: Passes `rhai/only_i32` through, making `rhai::INT` an `i32` instead of the default `i64`. All integer-accepting functions (`parse_bigint`, `to_bigint`, `**`, `<<`, `>>`) adapt automatically.
 
 ## Usage
 
@@ -113,6 +114,59 @@ let threshold = parse_bigint("1500000000000000000");
 if price >= threshold {
     print("Threshold met!");
 }
+```
+
+#### Cross-type comparisons are errors
+
+All six comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) raise a runtime error
+when one operand is a `BigInt` and the other is any other type (`int`, `float`, `string`,
+`bool`). This prevents subtle bugs where a mismatched comparison silently returns `false`
+without any indication that something is wrong. The error fires regardless of which side
+the `BigInt` is on.
+
+**int**
+```js
+// ❌ All operators raise a runtime error
+parse_bigint(42) == 42
+parse_bigint(42) != 42
+parse_bigint(42) <  42
+parse_bigint(42) >= 42
+42 == parse_bigint(42)   // right-hand side equally affected
+
+// ✅ Wrap the int first
+parse_bigint(42) == parse_bigint(42)
+parse_bigint(100) > parse_bigint(42)
+```
+
+**float**
+```js
+// ❌ Runtime error for every operator
+parse_bigint(42) == 3.14
+parse_bigint(42) <  3.14
+
+// ✅ Convert the float to BigInt first via to_bigint() (truncates toward zero)
+3.14.to_bigint() == parse_bigint(3)
+parse_bigint(10) > (2.9).to_bigint()
+```
+
+**string**
+```js
+// ❌ Runtime error for every operator
+parse_bigint(42) == "42"
+parse_bigint(42) <  "42"
+
+// ✅ Parse both sides first
+parse_bigint("42") == parse_bigint("42")
+parse_bigint("100") > parse_bigint("42")
+```
+
+**bool**
+```js
+// ❌ Runtime error — bool and BigInt are incompatible
+parse_bigint(1) == true
+
+// ✅ Express the intent explicitly with a BigInt comparison
+parse_bigint(1) != parse_bigint(0)   // "is non-zero?"
 ```
 
 ## Bridging Rust and Rhai

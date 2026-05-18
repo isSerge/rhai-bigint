@@ -1,10 +1,10 @@
 [package]
 name = "rhai-bigint"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 description = "Rhai plugin providing arbitrary-precision BigInt support"
 license = "MIT"
-repository = "https://github.com/isSerge/rhai-bigint"
+repository = "https://github.com/rhaiscript/rhai-bigint"
 authors = ["Serge Kovbasiuk <isserge@protonmail.com>"]
 keywords = ["rhai", "scripting", "bigint", "math", "plugin"]
 categories = ["api-bindings", "mathematics"]
@@ -12,6 +12,7 @@ categories = ["api-bindings", "mathematics"]
 [features]
 default = []
 sync = ["rhai/sync"]
+only_i32 = ["rhai/only_i32"]
 
 [dependencies]
 num-bigint = "0.4.5"
