@@ -160,6 +160,10 @@ mod bigint_functions {
     /// and fit in a `u32`; returns an error otherwise.
     #[rhai_fn(name = "**", pure, return_raw)]
     pub fn pow(base: &mut BigInt, exp: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        // The `exp < 0` branch is intentionally kept separate from the
+        // `u32::try_from` below. Both would reject negative values, but
+        // `try_from` would produce a generic "too large" message. The explicit
+        // branch gives users a clearer "must be non-negative" diagnostic.
         if exp < 0 {
             return Err(format!("Exponent must be non-negative, got {exp}").into());
         }
@@ -185,6 +189,9 @@ mod bigint_functions {
     }
 
     fn validate_shift_amount(shift: INT) -> Result<u32, Box<rhai::EvalAltResult>> {
+        // Explicit negative check for the same reason as in `pow`: `try_from`
+        // would also reject negatives, but with a "too large" message instead
+        // of the more accurate "must be non-negative" one.
         if shift < 0 {
             return Err(format!("Shift amount must be non-negative, got {shift}").into());
         }
