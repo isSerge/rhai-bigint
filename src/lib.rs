@@ -114,7 +114,7 @@ mod bigint_functions {
     pub fn parse_bigint_from_str(value: String) -> Result<BigInt, Box<rhai::EvalAltResult>> {
         value
             .parse::<BigInt>()
-            .map_err(|e| format!("Failed to create BigInt from string: {e}").into())
+            .map_err(|e| format!("Cannot parse {value:?} as BigInt: {e}").into())
     }
 
     /// Converts an integer to a `BigInt` via method-call syntax: `42.to_bigint()`.
@@ -282,7 +282,9 @@ mod bigint_functions {
             .to_f64()
             .map(|f| f as rhai::FLOAT)
             .filter(|f| f.is_finite())
-            .ok_or_else(|| "BigInt value is too large to represent as a finite float".into())
+            .ok_or_else(|| {
+                "BigInt value is out of range for float (magnitude overflows to infinity)".into()
+            })
     }
 }
 
@@ -297,21 +299,21 @@ bigint_cross_type_cmp_module!(
     bigint_float_cmp,
     rhai::FLOAT,
     "float",
-    "convert the float first: x == parse_bigint(42)"
+    "convert the float to BigInt first via to_bigint() (truncates toward zero): x.to_bigint() == y"
 );
 
 bigint_cross_type_cmp_module!(
     bigint_string_cmp,
     rhai::ImmutableString,
     "string",
-    r#"parse the string first: parse_bigint("42") == parse_bigint(42)"#
+    r#"parse both sides first: parse_bigint(x) == parse_bigint(y)"#
 );
 
 bigint_cross_type_cmp_module!(
     bigint_bool_cmp,
     bool,
     "bool",
-    "BigInt and bool are incompatible types"
+    "convert the BigInt to int first if a boolean check is needed: x != parse_bigint(0)"
 );
 
 def_package! {
