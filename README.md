@@ -118,26 +118,56 @@ if price >= threshold {
 
 #### Cross-type comparisons are errors
 
-Comparing a `BigInt` with any other type (`int`, `float`, `string`, `bool`) raises a
-runtime error rather than silently returning `false`. This prevents subtle bugs where
-a mismatched comparison always evaluates to `false` without any indication that
-something is wrong.
+All six comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) raise a runtime error
+when one operand is a `BigInt` and the other is any other type (`int`, `float`, `string`,
+`bool`). This prevents subtle bugs where a mismatched comparison silently returns `false`
+without any indication that something is wrong. The error fires regardless of which side
+the `BigInt` is on.
 
+**int**
 ```js
-// ❌ Runtime error — wrap the int first
+// ❌ All operators raise a runtime error
 parse_bigint(42) == 42
+parse_bigint(42) != 42
+parse_bigint(42) <  42
+parse_bigint(42) >= 42
+42 == parse_bigint(42)   // right-hand side equally affected
 
-// ❌ Runtime error — convert the float first
-parse_bigint(42) == 42.0
-
-// ❌ Runtime error — parse the string first
-parse_bigint(42) == "42"
-
-// ✅ Correct — compare two BigInts
+// ✅ Wrap the int first
 parse_bigint(42) == parse_bigint(42)
+parse_bigint(100) > parse_bigint(42)
 ```
 
-The same rule applies when the `BigInt` is on the right-hand side (`42 == parse_bigint(42)`).
+**float**
+```js
+// ❌ Runtime error for every operator
+parse_bigint(42) == 3.14
+parse_bigint(42) <  3.14
+
+// ✅ Convert the float to BigInt first via to_bigint() (truncates toward zero)
+3.14.to_bigint() == parse_bigint(3)
+parse_bigint(10) > (2.9).to_bigint()
+```
+
+**string**
+```js
+// ❌ Runtime error for every operator
+parse_bigint(42) == "42"
+parse_bigint(42) <  "42"
+
+// ✅ Parse both sides first
+parse_bigint("42") == parse_bigint("42")
+parse_bigint("100") > parse_bigint("42")
+```
+
+**bool**
+```js
+// ❌ Runtime error — bool and BigInt are incompatible
+parse_bigint(1) == true
+
+// ✅ Express the intent explicitly with a BigInt comparison
+parse_bigint(1) != parse_bigint(0)   // "is non-zero?"
+```
 
 ## Bridging Rust and Rhai
 
