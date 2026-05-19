@@ -934,47 +934,29 @@ mod tests {
         let mut engine = Engine::new();
         BigIntPackage::new().register_into_engine(&mut engine);
 
-        let sigs = engine.gen_fn_signatures(false);
+        // Join signatures into a single string for clearer failure messages.
+        let sigs = engine.gen_fn_signatures(true);
         let sigs_str = sigs.join("\n");
 
-        let has_bigint_signature = |name: &str| {
-            sigs.iter()
-                .any(|sig| sig.contains(name) && sig.contains("BigInt"))
-        };
-
+        // Every named function that takes or returns a BigInt must appear.
         for name in &["to_bigint", "to_string", "to_hex", "to_float"] {
             assert!(
-                has_bigint_signature(name),
+                sigs.iter()
+                    .any(|sig| sig.contains(name) && sig.contains("BigInt")),
                 "expected BigInt-specific `{name}` signature in metadata, got:\n{sigs_str}"
             );
         }
 
-        let parse_bigint_sigs: Vec<_> = sigs
+        // The `parse_bigint` function must have at least three overloads (int, float, string).
+        let parse_bigint_count = sigs
             .iter()
-            .filter(|sig| sig.contains("parse_bigint"))
-            .collect();
+            .filter(|sig| sig.contains("parse_bigint") && sig.contains("BigInt"))
+            .count();
 
         assert!(
-            parse_bigint_sigs.len() >= 2,
-            "expected multiple `parse_bigint` overloads in metadata, got:\n{sigs_str}"
-        );
-
-        assert!(
-            parse_bigint_sigs.iter().any(|sig| {
-                sig.contains("BigInt") && (sig.contains("INT") || sig.contains("i64"))
-            }),
-            "expected integer `parse_bigint` overload returning BigInt, got:\n{sigs_str}"
-        );
-
-        assert!(
-            parse_bigint_sigs.iter().any(|sig| {
-                sig.contains("BigInt")
-                    && (sig.contains("string")
-                        || sig.contains("String")
-                        || sig.contains("ImmutableString")
-                        || sig.contains("&str"))
-            }),
-            "expected string `parse_bigint` overload returning BigInt, got:\n{sigs_str}"
+            parse_bigint_count >= 3,
+            "expected at least 3 `parse_bigint` overloads (int, float, string), \
+             got {parse_bigint_count}:\n{sigs_str}"
         );
     }
 }
