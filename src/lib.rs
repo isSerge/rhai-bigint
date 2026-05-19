@@ -926,4 +926,37 @@ mod tests {
         );
         assert!(result.is_err(), "overflow to infinity should be rejected");
     }
+
+    // Verify that all BigInt functions are visible via Rhai's metadata API.
+    #[cfg(feature = "metadata")]
+    #[test]
+    fn test_metadata_signatures() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // Join signatures into a single string for clearer failure messages.
+        let sigs = engine.gen_fn_signatures(true);
+        let sigs_str = sigs.join("\n");
+
+        // Every named function that takes or returns a BigInt must appear.
+        for name in &["to_bigint", "to_string", "to_hex", "to_float"] {
+            assert!(
+                sigs.iter()
+                    .any(|sig| sig.contains(name) && sig.contains("BigInt")),
+                "expected BigInt-specific `{name}` signature in metadata, got:\n{sigs_str}"
+            );
+        }
+
+        // The `parse_bigint` function must have at least three overloads (int, float, string).
+        let parse_bigint_count = sigs
+            .iter()
+            .filter(|sig| sig.contains("parse_bigint") && sig.contains("BigInt"))
+            .count();
+
+        assert!(
+            parse_bigint_count >= 3,
+            "expected at least 3 `parse_bigint` overloads (int, float, string), \
+             got {parse_bigint_count}:\n{sigs_str}"
+        );
+    }
 }

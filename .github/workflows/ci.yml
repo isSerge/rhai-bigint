@@ -17,6 +17,7 @@ jobs:
           - flags: "--features only_i32"       # INT = i32
           - flags: "--features sync"
           - flags: "--features sync,only_i32"
+          - flags: "--features metadata"
           - flags: "--all-features"            # for any future features
     steps:
       - uses: actions/checkout@v4
