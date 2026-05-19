@@ -926,4 +926,28 @@ mod tests {
         );
         assert!(result.is_err(), "overflow to infinity should be rejected");
     }
+
+    // Verify that all BigInt functions are visible via Rhai's metadata API.
+    #[cfg(feature = "metadata")]
+    #[test]
+    fn test_metadata_signatures() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let sigs = engine.gen_fn_signatures(false);
+        let sigs_str = sigs.join("\n");
+
+        for name in &[
+            "parse_bigint",
+            "to_bigint",
+            "to_string",
+            "to_hex",
+            "to_float",
+        ] {
+            assert!(
+                sigs_str.contains(name),
+                "expected `{name}` in metadata signatures, got:\n{sigs_str}"
+            );
+        }
+    }
 }
