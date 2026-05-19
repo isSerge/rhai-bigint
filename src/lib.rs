@@ -937,17 +937,44 @@ mod tests {
         let sigs = engine.gen_fn_signatures(false);
         let sigs_str = sigs.join("\n");
 
-        for name in &[
-            "parse_bigint",
-            "to_bigint",
-            "to_string",
-            "to_hex",
-            "to_float",
-        ] {
+        let has_bigint_signature = |name: &str| {
+            sigs.iter()
+                .any(|sig| sig.contains(name) && sig.contains("BigInt"))
+        };
+
+        for name in &["to_bigint", "to_string", "to_hex", "to_float"] {
             assert!(
-                sigs_str.contains(name),
-                "expected `{name}` in metadata signatures, got:\n{sigs_str}"
+                has_bigint_signature(name),
+                "expected BigInt-specific `{name}` signature in metadata, got:\n{sigs_str}"
             );
         }
+
+        let parse_bigint_sigs: Vec<_> = sigs
+            .iter()
+            .filter(|sig| sig.contains("parse_bigint"))
+            .collect();
+
+        assert!(
+            parse_bigint_sigs.len() >= 2,
+            "expected multiple `parse_bigint` overloads in metadata, got:\n{sigs_str}"
+        );
+
+        assert!(
+            parse_bigint_sigs.iter().any(|sig| {
+                sig.contains("BigInt") && (sig.contains("INT") || sig.contains("i64"))
+            }),
+            "expected integer `parse_bigint` overload returning BigInt, got:\n{sigs_str}"
+        );
+
+        assert!(
+            parse_bigint_sigs.iter().any(|sig| {
+                sig.contains("BigInt")
+                    && (sig.contains("string")
+                        || sig.contains("String")
+                        || sig.contains("ImmutableString")
+                        || sig.contains("&str"))
+            }),
+            "expected string `parse_bigint` overload returning BigInt, got:\n{sigs_str}"
+        );
     }
 }
