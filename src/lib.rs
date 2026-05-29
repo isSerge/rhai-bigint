@@ -345,12 +345,8 @@ pub(crate) mod rand_functions {
         if bits < 0 {
             return Err(format!("Number of bits must be non-negative, got {bits}").into());
         }
-        // Convert to u32, checking for overflow
-        let bits_u32 = u32::try_from(bits).map_err(|_| -> Box<rhai::EvalAltResult> {
-            format!("Number of bits is too large, must be at most {}", u32::MAX).into()
-        })?;
         let mut rng = rand::thread_rng();
-        Ok(BigInt::from(rng.gen_biguint(bits_u32 as u64)))
+        Ok(BigInt::from(rng.gen_biguint(bits as u64)))
     }
 
     /// Generates a random `BigInt` within the range `[min, max)`
