@@ -26,7 +26,6 @@ macro_rules! bigint_cross_type_cmp_module {
         #[export_module]
         pub(crate) mod $mod_name {
             use num_bigint::BigInt;
-            use rhai::plugin::*;
 
             #[rhai_fn(name = "==", pure, return_raw)]
             pub fn eq_bigint(_l: &mut BigInt, _r: $t) -> Result<bool, Box<rhai::EvalAltResult>> {
@@ -326,6 +325,42 @@ def_package! {
         combine_with_exported_module!(lib, "bigint_float_cmp", bigint_float_cmp);
         combine_with_exported_module!(lib, "bigint_string_cmp", bigint_string_cmp);
         combine_with_exported_module!(lib, "bigint_bool_cmp", bigint_bool_cmp);
+
+        // Optional `rand_bigint(bits)` and `rand_bigint(min, max)` functions, gated on the `rand` feature.
+        #[cfg(feature = "rand")]
+        combine_with_exported_module!(lib, "rand_bigint", rand_functions);
+    }
+}
+
+#[cfg(feature = "rand")]
+#[export_module]
+pub(crate) mod rand_functions {
+    use num_bigint::{BigInt, RandBigInt};
+    use rhai::INT;
+
+    /// Generates a random `BigInt` with the specified number of bits
+    #[rhai_fn(name = "rand_bigint", return_raw)]
+    pub fn rand_bits(bits: INT) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        // Explicit negative check
+        if bits < 0 {
+            return Err(format!("Number of bits must be non-negative, got {bits}").into());
+        }
+        // Convert to u32, checking for overflow
+        let bits_u32 = u32::try_from(bits).map_err(|_| -> Box<rhai::EvalAltResult> {
+            format!("Number of bits is too large, must be at most {}", u32::MAX).into()
+        })?;
+        let mut rng = rand::thread_rng();
+        Ok(BigInt::from(rng.gen_biguint(bits_u32 as u64)))
+    }
+
+    /// Generates a random `BigInt` within the range `[min, max)`
+    #[rhai_fn(name = "rand_bigint", return_raw)]
+    pub fn rand_range(min: BigInt, max: BigInt) -> Result<BigInt, Box<rhai::EvalAltResult>> {
+        if min >= max {
+            return Err(format!("Minimum {min} must be less than maximum {max}").into());
+        }
+        let mut rng = rand::thread_rng();
+        Ok(rng.gen_bigint_range(&min, &max))
     }
 }
 
@@ -958,5 +993,62 @@ mod tests {
             "expected at least 3 `parse_bigint` overloads (int, float, string), \
              got {parse_bigint_count}:\n{sigs_str}"
         );
+    }
+}
+
+#[cfg(all(test, feature = "rand"))]
+mod rand_tests {
+    use super::*;
+    use rhai::{packages::Package, Engine};
+
+    #[test]
+    fn test_rand_bigint_bits() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // Generate a random 256-bit number
+        let result: BigInt = engine.eval("rand_bigint(256)").unwrap();
+
+        // Should be positive
+        assert!(
+            result >= BigInt::from(0),
+            "Random bits should generate a positive number"
+        );
+
+        // Should fit within the requested bit length (i.e. be less than 2^256)
+        assert!(
+            result.bits() <= 256,
+            "Generated number exceeds requested bit length"
+        );
+    }
+
+    #[test]
+    fn test_rand_bigint_bits_zero() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        // Generate a random 0-bit number, which should always be 0
+        let result: BigInt = engine.eval("rand_bigint(0)").unwrap();
+        assert_eq!(
+            result,
+            BigInt::from(0),
+            "rand_bigint(0) should always return 0"
+        );
+    }
+
+    #[test]
+    fn test_rand_bigint_range() {
+        let mut engine = Engine::new();
+        BigIntPackage::new().register_into_engine(&mut engine);
+
+        let script = r#"
+            let min = parse_bigint(100);
+            let max = parse_bigint(200);
+            rand_bigint(min, max)
+        "#;
+
+        let result: BigInt = engine.eval(script).unwrap();
+        assert!(result >= BigInt::from(100));
+        assert!(result < BigInt::from(200));
     }
 }
