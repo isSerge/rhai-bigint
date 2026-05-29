@@ -316,7 +316,7 @@ bigint_cross_type_cmp_module!(
 );
 
 def_package! {
-    /// Arbitrary-precision BigInt for Rhai: `bigint()` constructor plus
+    /// Arbitrary-precision BigInt for Rhai: `parse_bigint()` constructor plus
     /// arithmetic (`+`, `-`, `*`, `/`, `%`), unary negation (`-`), and comparison operators.
     pub BigIntPackage(lib) {
         lib.set_custom_type::<BigInt>("BigInt");

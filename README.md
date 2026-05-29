@@ -24,6 +24,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 - Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
 - Provides `to_bigint()` as a method on integers and floats for ergonomic conversion: `42.to_bigint()`, `1.5.to_bigint()`.
+- Optional: Generate cryptographically secure random `BigInt`s by range or exact bit-length (via the `rand` feature).
 
 ## Installation
 
@@ -48,6 +49,7 @@ rhai-bigint = "0.1.9"
 *   `sync`: Enables `rhai/sync` support. Turn this on if your Rhai engine requires thread-safe types (e.g., when evaluating scripts across a Tokio thread pool).
 *   `only_i32`: Passes `rhai/only_i32` through, making `rhai::INT` an `i32` instead of the default `i64`. All integer-accepting functions (`parse_bigint`, `to_bigint`, `**`, `<<`, `>>`) adapt automatically.
 *   `metadata`: Enables `rhai/metadata`, which exposes function signature and documentation metadata on the Rhai `Engine`. Required if you want to call `engine.gen_fn_signatures()` or similar introspection APIs.
+*   `rand`: Enables the generation of random `BigInt` values. Pulls in the `rand` crate and exposes the `rand_bigint` functions.
 
 ## Usage
 
@@ -115,6 +117,18 @@ let threshold = parse_bigint("1500000000000000000");
 if price >= threshold {
     print("Threshold met!");
 }
+```
+
+#### Random Number Generation (`rand` feature)
+
+```js
+// Generate a random, positive number of exactly 256 bits
+let private_key = rand_bigint(256);
+
+// Generate a random number within a specific range [min, max)
+let min = parse_bigint(100);
+let max = parse_bigint("1000000000000000000");
+let random_amount = rand_bigint(min, max);
 ```
 
 #### Cross-type comparisons are errors
