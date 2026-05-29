@@ -131,6 +131,40 @@ let max = parse_bigint("1000000000000000000");
 let random_amount = rand_bigint(min, max);
 ```
 
+#### Integration with `rhai-rand`
+
+This crate is designed to integrate seamlessly with [`rhai-rand`](https://github.com/rhaiscript/rhai-rand) via function overloading.
+
+Register both packages:
+
+```js
+use rhai::Engine;
+use rhai::packages::Package;
+use rhai_rand::RandomPackage;
+use rhai_bigint::BigIntPackage;
+
+let mut engine = Engine::new();
+
+// Register standard random number generation (for i64/f64)
+RandomPackage::new().register_into_engine(&mut engine);
+
+// Register BigInt random number generation
+BigIntPackage::new().register_into_engine(&mut engine);
+```
+
+In Rhai scripts `rand()` function will route to the correct crate automatically based on the argument types:
+
+```js
+// Standard integers - routes to `rhai-rand`
+let small_random = rand(1, 10); 
+
+// BigInts - routes to `rhai-bigint`
+let min = parse_bigint("1000000000000000000");
+let max = parse_bigint("9000000000000000000");
+let massive_random = rand(min, max); 
+
+```
+
 #### Cross-type comparisons are errors
 
 All six comparison operators (`==`, `!=`, `<`, `<=`, `>`, `>=`) raise a runtime error
