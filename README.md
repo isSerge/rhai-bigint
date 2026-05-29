@@ -24,7 +24,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 - Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
 - Provides `to_bigint()` as a method on integers and floats for ergonomic conversion: `42.to_bigint()`, `1.5.to_bigint()`.
-- Optional: Generate cryptographically secure random `BigInt`s by range or exact bit-length (via the `rand` feature).
+- Optional: Generate cryptographically secure random `BigInt`s by range or with up to specified bit-length (via the `rand` feature).
 
 ## Installation
 
@@ -40,7 +40,7 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rhai = "1.22.2"
+rhai = "1.25.1"
 rhai-bigint = "0.1.10"
 ```
 
@@ -122,7 +122,7 @@ if price >= threshold {
 #### Random Number Generation (`rand` feature)
 
 ```js
-// Generate a random, positive number of exactly 256 bits
+// Generate a random, positive number at most 256 bits
 let private_key = rand_bigint(256);
 
 // Generate a random number within a specific range [min, max)
