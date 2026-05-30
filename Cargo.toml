@@ -1,6 +1,6 @@
 [package]
 name = "rhai-bigint"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 description = "Rhai plugin providing arbitrary-precision BigInt support"
 license = "MIT"
@@ -14,8 +14,10 @@ default = []
 sync = ["rhai/sync"]
 only_i32 = ["rhai/only_i32"]
 metadata = ["rhai/metadata"]
+rand = ["dep:rand", "num-bigint/rand"]
 
 [dependencies]
 num-bigint = "0.4.5"
 num-traits = "0.2.19"
-rhai = "1.22.2"
+rand = { version = "0.8.5", optional = true }
+rhai = "1.25.1"

@@ -24,6 +24,7 @@ Naively casting these large numbers to floating-point (`f64`) results in catastr
 - Overloads comparison operators (`==`, `!=`, `>`, `>=`, `<`, `<=`).
 - Converts `BigInt` back to a decimal string (`to_string`), hex string (`to_hex`), or float (`to_float`).
 - Provides `to_bigint()` as a method on integers and floats for ergonomic conversion: `42.to_bigint()`, `1.5.to_bigint()`.
+- Optional: Generate cryptographically secure random `BigInt`s by range or with up to specified bit-length (via the `rand` feature).
 
 ## Installation
 
@@ -39,8 +40,8 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rhai = "1.22.2"
-rhai-bigint = "0.1.9"
+rhai = "1.25.1"
+rhai-bigint = "0.1.10"
 ```
 
 ### Feature Flags
@@ -48,6 +49,7 @@ rhai-bigint = "0.1.9"
 *   `sync`: Enables `rhai/sync` support. Turn this on if your Rhai engine requires thread-safe types (e.g., when evaluating scripts across a Tokio thread pool).
 *   `only_i32`: Passes `rhai/only_i32` through, making `rhai::INT` an `i32` instead of the default `i64`. All integer-accepting functions (`parse_bigint`, `to_bigint`, `**`, `<<`, `>>`) adapt automatically.
 *   `metadata`: Enables `rhai/metadata`, which exposes function signature and documentation metadata on the Rhai `Engine`. Required if you want to call `engine.gen_fn_signatures()` or similar introspection APIs.
+*   `rand`: Enables the generation of random `BigInt` values. Pulls in the `rand` crate and exposes the `rand_bigint` functions.
 
 ## Usage
 
@@ -115,6 +117,52 @@ let threshold = parse_bigint("1500000000000000000");
 if price >= threshold {
     print("Threshold met!");
 }
+```
+
+#### Random Number Generation (`rand` feature)
+
+```js
+// Generate a random, positive number at most 256 bits
+let private_key = rand_bigint(256);
+
+// Generate a random number within a specific range [min, max)
+let min = parse_bigint(100);
+let max = parse_bigint("1000000000000000000");
+let random_amount = rand_bigint(min, max);
+```
+
+#### Integration with `rhai-rand`
+
+This crate is designed to integrate seamlessly with [`rhai-rand`](https://github.com/rhaiscript/rhai-rand) via function overloading.
+
+Register both packages:
+
+```js
+use rhai::Engine;
+use rhai::packages::Package;
+use rhai_rand::RandomPackage;
+use rhai_bigint::BigIntPackage;
+
+let mut engine = Engine::new();
+
+// Register standard random number generation (for i64/f64)
+RandomPackage::new().register_into_engine(&mut engine);
+
+// Register BigInt random number generation
+BigIntPackage::new().register_into_engine(&mut engine);
+```
+
+In Rhai scripts `rand()` function will route to the correct crate automatically based on the argument types:
+
+```js
+// Standard integers - routes to `rhai-rand`
+let small_random = rand(1, 10); 
+
+// BigInts - routes to `rhai-bigint`
+let min = parse_bigint("1000000000000000000");
+let max = parse_bigint("9000000000000000000");
+let massive_random = rand(min, max); 
+
 ```
 
 #### Cross-type comparisons are errors

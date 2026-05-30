@@ -13,12 +13,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - flags: ""                          # default (INT = i64)
-          - flags: "--features only_i32"       # INT = i32
+          - flags: ""                            # default (INT = i64)
+          - flags: "--features only_i32"         # INT = i32
           - flags: "--features sync"
           - flags: "--features sync,only_i32"
           - flags: "--features metadata"
-          - flags: "--all-features"            # for any future features
+          - flags: "--features rand"             
+          - flags: "--features rand,only_i32"    
+          - flags: "--all-features"              # all together
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
